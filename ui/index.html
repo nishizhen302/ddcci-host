@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DDC/CI 控制台</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+  <div class="app">
+    <div class="panel">
+      <div class="pbar pywebview-drag-region">
+        <span class="ttl"><span id="pulse" class="pulse" data-state="idle"></span><span id="conn">连接中…</span></span>
+        <span class="winctl pywebview-no-drag">
+          <button id="win-refresh" class="wbtn" title="重新扫描显示器" aria-label="重新扫描显示器">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5"/></svg>
+          </button>
+          <span id="skin" class="skin" title="切换皮肤" role="button" tabindex="0" aria-label="切换深色 / 白底">
+            <span class="moon">🌙</span><span class="sun">☀</span>
+          </span>
+          <button id="win-min" class="wbtn" title="最小化" aria-label="最小化">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14"/></svg>
+          </button>
+          <button id="win-close" class="wbtn wclose" title="关闭" aria-label="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </span>
+      </div>
+
+      <div class="body">
+        <label class="sel" id="sel-wrap">
+          <span class="ic">
+            <svg class="i" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            <span id="sel-name">—</span>
+          </span>
+          <span class="sel-meta tn"><span id="sel-id"></span> ⌄</span>
+          <select id="monitor-select" aria-label="选择显示器"></select>
+        </label>
+
+        <div class="chips" id="chips"></div>
+
+        <div id="controls" aria-live="polite"></div>
+
+        <details id="advanced" class="advanced" hidden>
+          <summary>其他 VCP · raw 调试</summary>
+          <p class="advanced-hint">caps 里出现、暂无友好控件的 VCP。手动读/写，后续自定义命令的地基。</p>
+          <div id="raw-controls" class="raw-controls"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
