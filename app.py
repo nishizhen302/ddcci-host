@@ -14,7 +14,8 @@ import webview
 
 from ddcci_core import select_backend, pick_default_monitor, parse_caps
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+# 源码运行时 = 脚本目录; PyInstaller 打包后 = 解压临时目录(_MEIPASS), ui 资源在其下
+HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 WIN_TITLE = "DDC/CI 控制台"
 
 _HWND = 0  # 主窗口句柄

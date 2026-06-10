@@ -1,0 +1,3 @@
+# DDC/CI 控制台 运行依赖
+# 其余均为 Python 标准库 (os/sys/ctypes/threading/...) 与本地模块
+pywebview==6.2.1
