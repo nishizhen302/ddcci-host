@@ -21,6 +21,7 @@ _HWND = 0  # 主窗口句柄
 _OLD_WNDPROC = None     # 子类化前的原窗口过程 (CallWindowProc 回退用)
 _NEW_WNDPROC_REF = None  # 新窗口过程的 ctypes 回调, 必须全局保活否则崩溃
 _RESIZE_BORDER = 8       # 边缘缩放命中区厚度 (逻辑像素, 按 DPI 缩放)
+WM_APP_RESIZE = 0x8001   # 自定义消息: 前端请求边缘缩放 (wParam=HT 码), 在 GUI 线程处理
 
 
 def _find_own_window():
@@ -91,11 +92,13 @@ def _hittest(hwnd, lparam):
 
 
 def _wndproc(hwnd, msg, wparam, lparam):
-    """子类化后的窗口过程: 接管 WM_NCCALCSIZE(去非客户区) 与 WM_NCHITTEST(边缘缩放)。
+    """子类化后的窗口过程: 接管 WM_NCCALCSIZE(去非客户区) 与 WM_NCHITTEST(边缘缩放),
+    以及自定义 WM_APP_RESIZE(在 GUI 线程上发起原生缩放循环)。
     其余消息回退给原过程。任何异常都回退, 绝不让 GUI 崩。"""
     import ctypes
     WM_NCCALCSIZE = 0x0083
     WM_NCHITTEST = 0x0084
+    WM_NCLBUTTONDOWN = 0x00A1
     try:
         if msg == WM_NCCALCSIZE and wparam:
             return 0  # 客户区 = 整个窗口, 无非客户边框 (去掉那圈白框)
@@ -104,6 +107,12 @@ def _wndproc(hwnd, msg, wparam, lparam):
             if ht is not None:
                 return ht
             # 不在边缘 → 落到原过程返回 HTCLIENT, 拖拽交给 pywebview-drag-region
+        if msg == WM_APP_RESIZE:
+            # 已在 GUI 线程: 先松开 WebView2 的鼠标捕获, 再进系统原生缩放循环
+            user32 = ctypes.windll.user32
+            user32.ReleaseCapture()
+            user32.SendMessageW(hwnd, WM_NCLBUTTONDOWN, int(wparam), 0)
+            return 0
     except Exception:
         pass
     return ctypes.windll.user32.CallWindowProcW(_OLD_WNDPROC, hwnd, msg, wparam, lparam)
@@ -301,6 +310,20 @@ class Api:
     def close_window(self):
         try:
             webview.windows[0].destroy()
+            return {"ok": True}
+        except Exception as e:
+            return _err(e)
+
+    def start_resize(self, ht):
+        """前端在窗口边/角 pointerdown 时调用: 发 WM_NCLBUTTONDOWN 进系统原生缩放循环。
+        因 WebView2 子窗铺满整窗、父窗 NCHITTEST 摸不到边缘, 改由 JS 触发 (同拖动机制)。
+        ht = HT 命中码 (10..17: 左/右/上/左上/右上/下/左下/右下)。"""
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            if _HWND:
+                # 投到 GUI 线程处理 (ReleaseCapture 必须在拥有捕获的线程上才生效)
+                user32.PostMessageW(_HWND, WM_APP_RESIZE, int(ht), 0)
             return {"ok": True}
         except Exception as e:
             return _err(e)

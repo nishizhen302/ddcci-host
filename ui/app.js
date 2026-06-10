@@ -284,7 +284,8 @@ async function renderControls(mon) {
   const chips = $("#chips"); chips.innerHTML = "";
   if (codes.has(SIGNAL_VCP)) {
     const r = await api.get(SIGNAL_VCP);
-    const src = r.ok ? labelFor(VCP60_LABELS, r.current) : "未响应";
+    // VCP 0x60 只有低字节表示信号源 (高字节常被厂商塞非标值, 如 Dell 回 0x0F0F)
+    const src = r.ok ? labelFor(VCP60_LABELS, r.current & 0xff) : "未响应";
     const c = document.createElement("span"); c.className = "chip";
     c.innerHTML = `${icon(I.signal, "sm")}信号源 · ${src}`;
     chips.appendChild(c);
@@ -388,6 +389,13 @@ window.addEventListener("pywebviewready", () => {
   $("#win-min").addEventListener("click", () => window.pywebview.api.minimize_window());
   $("#win-close").addEventListener("click", () => window.pywebview.api.close_window());
   $("#win-refresh").addEventListener("click", () => refresh());
+  // 窗口边/角缩放: pointerdown 时交给系统原生缩放循环
+  document.querySelectorAll(".resz").forEach((el) => {
+    el.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      window.pywebview?.api?.start_resize(Number(el.dataset.ht));
+    });
+  });
   // 注: 不再用 window focus 自动刷新 (会被其他程序抢焦点频繁误触发); 改由 ↻ 按钮手动刷新
   $("#monitor-select").addEventListener("change", async (e) => {
     const m = MONITORS.find((x) => x.id === Number(e.target.value));

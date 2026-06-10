@@ -75,6 +75,17 @@ body {
 .tn { font-variant-numeric: tabular-nums; }
 .app { width: 100%; }
 
+/* ---- 窗口边/角缩放手柄 (透明, 压在最上层; 角区盖过边区) ---- */
+.resz { position: fixed; z-index: 9999; }
+.resz.t  { top: 0; left: 9px; right: 9px; height: 5px; cursor: ns-resize; }
+.resz.b  { bottom: 0; left: 9px; right: 9px; height: 5px; cursor: ns-resize; }
+.resz.l  { left: 0; top: 9px; bottom: 9px; width: 5px; cursor: ew-resize; }
+.resz.r  { right: 0; top: 9px; bottom: 9px; width: 5px; cursor: ew-resize; }
+.resz.tl { top: 0; left: 0; width: 11px; height: 11px; cursor: nwse-resize; }
+.resz.tr { top: 0; right: 0; width: 11px; height: 11px; cursor: nesw-resize; }
+.resz.bl { bottom: 0; left: 0; width: 11px; height: 11px; cursor: nesw-resize; }
+.resz.br { bottom: 0; right: 0; width: 11px; height: 11px; cursor: nwse-resize; }
+
 /* ---- 面板 (铺满窗口, 顶部一抹柔光; flex 列布局: 标题栏固定 + 主体填充) ---- */
 .panel { position: relative; height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
 .panel::before {
