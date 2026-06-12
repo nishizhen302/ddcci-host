@@ -396,6 +396,19 @@ window.addEventListener("pywebviewready", () => {
       window.pywebview?.api?.start_resize(Number(el.dataset.ht));
     });
   });
+  // 标题栏拖动: WebView2(Win11) 由 pywebview-drag-region 原生处理;
+  // QtWebEngine(Win7) 后端不认 drag-region, 这里手动用 HTCAPTION(2) 走系统移动循环。
+  if (navigator.userAgent.includes("QtWebEngine")) {
+    const HTCAPTION = 2;
+    document.querySelectorAll(".pywebview-drag-region").forEach((bar) => {
+      bar.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        if (e.target.closest(".pywebview-no-drag")) return;  // 窗口按钮簇不触发拖动
+        e.preventDefault();
+        window.pywebview?.api?.start_resize(HTCAPTION);
+      });
+    });
+  }
   // 注: 不再用 window focus 自动刷新 (会被其他程序抢焦点频繁误触发); 改由 ↻ 按钮手动刷新
   $("#monitor-select").addEventListener("change", async (e) => {
     const m = MONITORS.find((x) => x.id === Number(e.target.value));

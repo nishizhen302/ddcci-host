@@ -183,6 +183,19 @@ def _style_native_window():
         SWP = 0x0001 | 0x0002 | 0x0004 | 0x0020  # NOSIZE|NOMOVE|NOZORDER|FRAMECHANGED
         user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP)
 
+        # 强制 Qt 按"客户区已铺满整窗"重新布局 webview: 加 WS_THICKFRAME 时 Windows 先把
+        # 客户区缩小, Qt 据此缩了 webview; NCCALCSIZE=0 把客户区撑满后 Qt 收不到尺寸变化,
+        # 顶/右会残留窗口深色底(白皮肤下=黑条)。这里抖动 1px 尺寸逼 Qt 重新 relayout 铺满。
+        from ctypes import wintypes as _wt
+        _r = _wt.RECT()
+        user32.GetWindowRect(hwnd, ctypes.byref(_r))
+        _w, _h = _r.right - _r.left, _r.bottom - _r.top
+        SWP_SIZE = 0x0002 | 0x0004  # NOMOVE|NOZORDER (允许改 size)
+        # 宽高都抖动且幅度要够: 高 DPI 下 1 物理像素 < 1 逻辑像素, 会被取整成"没变"
+        # 而不触发 relayout; 缩 20px 再还原, 确保跨过 1 逻辑像素、Qt 真重排铺满。
+        user32.SetWindowPos(hwnd, 0, 0, 0, _w - 20, _h - 20, SWP_SIZE)
+        user32.SetWindowPos(hwnd, 0, 0, 0, _w, _h, SWP_SIZE)
+
         # 去掉 Win11 顶部那条边框线 (DWMWA_BORDER_COLOR = COLOR_NONE)
         DWMWA_BORDER_COLOR = 34
         DWMWA_COLOR_NONE = 0xFFFFFFFE
@@ -342,7 +355,21 @@ def main():
     )
     # func 在 GUI 线程起来后执行: WS_THICKFRAME + NCCALCSIZE 铺满 + NCHITTEST 缩放 + DWM 圆角
     func = None if os.environ.get("DDCCI_NOSTYLE") else _style_native_window
-    webview.start(func, debug="--debug" in sys.argv)
+    # 渲染后端: Win11 默认 edgechromium(WebView2); Win7 走 'qt'(PyQt5 + QtWebEngine 自带 Chromium)。
+    # 由 DDCCI_GUI 环境变量选择, 不设则交给 pywebview 自动探测 (保持原 Win11 行为)。
+    gui = os.environ.get("DDCCI_GUI") or None
+    if gui == "qt":
+        # 高 DPI 缩放: 必须在 QApplication(webview.start 内部创建)之前开启高 DPI 缩放属性,
+        # 否则 ①QT_SCALE_FACTOR(冻结时由 app_win7 注入)不生效 ②非感知时被系统位图拉伸=点击偏移。
+        # 说明: 非冻结时 AA 自动检测系数正常工作; 冻结时自动检测失灵恒为 1x, 由 app_win7 注入的
+        # QT_SCALE_FACTOR 在此 AA 之上补足正确系数(1×系数), 故两种情形都得到正确缩放。
+        try:
+            from qtpy.QtCore import Qt, QCoreApplication
+            QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+            QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+        except Exception:
+            pass
+    webview.start(func, gui=gui, debug="--debug" in sys.argv)
 
 
 if __name__ == "__main__":
