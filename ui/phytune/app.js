@@ -73,15 +73,20 @@ function rowFor(p) {
   num.className = 'num'; num.type = 'number'; num.min = p.min; num.max = p.max; num.value = p.default;
   const cur = document.createElement('div'); cur.className = 'cur'; cur.textContent = '当前 …';
 
-  const rec = { def: p, slider, num, cur, last: p.default, pinned: false, pinBtn: null };
+  const rec = { def: p, slider, num, cur, last: p.default, pinned: false, pinBtn: null, dragging: false };
   PARAMS[p.name] = rec;
 
   // 拖动时只更新数字显示(纯 UI, 流畅); 松手(change)才真正写一次寄存器。
   // DDC/CI 每次读写要走 I²C 来回(慢), 拖动途中写会卡顿, 故只在释放时写。
+  // dragging 标志: 自动刷新轮询时, 别把用户正在操作的滑杆/输入框拽回硬件值。
+  slider.addEventListener('pointerdown', () => { rec.dragging = true; });
+  slider.addEventListener('pointerup', () => { rec.dragging = false; });
   slider.addEventListener('input', () => { num.value = slider.value; });
-  slider.addEventListener('change', () => writeParam(p.name, +slider.value));
+  slider.addEventListener('change', () => { rec.dragging = false; writeParam(p.name, +slider.value); });
+  num.addEventListener('focus', () => { rec.dragging = true; });
+  num.addEventListener('blur', () => { rec.dragging = false; });
   num.addEventListener('change', () => {
-    let v = clamp(+num.value, p.min, p.max); num.value = v; slider.value = v; writeParam(p.name, v);
+    let v = clamp(+num.value, p.min, p.max); num.value = v; slider.value = v; rec.dragging = false; writeParam(p.name, v);
   });
 
   row.appendChild(left); row.appendChild(slider);
@@ -106,7 +111,8 @@ async function _readInto(name) {
     const r = await api().phytune_param_read(name, MON, PORT);
     if (r && r.ok) {
       rec.cur.textContent = '当前 ' + r.value; rec.last = r.value;
-      rec.slider.value = r.value; rec.num.value = r.value;
+      // 用户正在拖这个滑杆/编辑数字框时不要拽回(自动刷新轮询尤其要避免); 只更新"当前"读数。
+      if (!rec.dragging) { rec.slider.value = r.value; rec.num.value = r.value; }
       return r.value;
     }
     rec.cur.textContent = '读失败'; return null;
@@ -194,6 +200,27 @@ async function _refreshAllInner() {
   } finally { spin(false); }
 }
 
+// ---- 自动刷新: 固件会在背后改寄存器(重锁复位 Icp 等), UI 须周期性读回才不显示陈旧值 ----
+let _pollTimer = null;
+let _polling = false;        // 防止上一轮没读完又叠一轮
+function setAutoRefresh(on) {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+  if (on) _pollTimer = setInterval(pollTick, 2000);   // 2 秒一轮
+}
+function pollTick() {
+  if (_polling || _busy) return;        // 串行锁忙(用户在写/读)就跳过这一拍
+  _polling = true;
+  lock(_pollReadAll).finally(() => { _polling = false; });
+}
+async function _pollReadAll() {
+  let okc = 0;
+  for (const name of Object.keys(PARAMS)) {
+    if (await _readInto(name) !== null) okc++;
+  }
+  // 全失败 = 句柄可能已失效(拔插过) → 自动重认板一次(免去手动点)。
+  if (okc === 0 && Object.keys(PARAMS).length) await pickBoard();
+}
+
 // frameless 窗口: 关闭/最小化/边角缩放/拖动全靠前端接到 Api(同主 UI 机制)。
 function wireWindowChrome() {
   const min = el('win-min'), close = el('win-close');
@@ -233,12 +260,24 @@ function wirePortSel() {
   });
 }
 
+// 自动刷新开关
+function wireAutoRefresh() {
+  const cb = el('autoref');
+  if (!cb) return;
+  cb.addEventListener('change', () => {
+    setAutoRefresh(cb.checked);
+    log(cb.checked ? '自动刷新已开(2秒/次): 显示实时跟住硬件。' : '自动刷新已关。');
+  });
+  setAutoRefresh(cb.checked);   // 按初始勾选状态启动
+}
+
 async function boot() {
   wireWindowChrome();
   wirePortSel();
   await pickBoard();
   await buildUI();
   await refreshAll();
+  wireAutoRefresh();   // 参数表建好后再启动轮询
   log('就绪。先选对你插的 HDMI 口(D2~D5)！绿=在线即时生效; 黄=需📌固化(重锁会被覆盖)。');
 }
 

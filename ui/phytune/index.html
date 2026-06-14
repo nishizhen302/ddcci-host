@@ -41,7 +41,8 @@
  .scroll::-webkit-scrollbar-thumb{background:#2a2a31;border-radius:8px;
    border:2px solid transparent;background-clip:content-box}
 
- .bar{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+ .bar{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+ #board{flex:1 1 100%;min-width:0}
  .sub{color:var(--sub);font-size:12px}
  button.ghost{background:#23232a;color:var(--txt);border:1px solid var(--line);
    border-radius:7px;padding:6px 12px;cursor:pointer;font-size:12px}
@@ -52,6 +53,8 @@
  #btn-refresh.spin{opacity:.75;cursor:default}
  #btn-refresh.spin .ric{animation:spin .7s linear infinite}
  @keyframes spin{to{transform:rotate(360deg)}}
+ .chk{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--sub);cursor:pointer;white-space:nowrap}
+ .chk input{cursor:pointer;accent-color:var(--green)}
 
  /* 怎么调 — 症状速查 */
  .guide{background:#14131c;border:1px solid #2c2a3a;border-radius:11px;margin:8px 0 4px}
@@ -116,6 +119,9 @@
          <option value="4">D4</option>
          <option value="5">D5</option>
        </select>
+     </label>
+     <label class="chk" title="每 2 秒自动读回所有值, 显示实时跟住硬件(固件会在背后改寄存器)">
+       <input type="checkbox" id="autoref" checked> 自动刷新
      </label>
      <button class="ghost" id="btn-refresh" onclick="refreshAll()"><span class="ric">↻</span> <span class="rtx">读取全部</span></button>
      <button class="ghost" id="btn-blank" onclick="blankTest()" title="临时关 RGB 输出 ~0.8 秒, 画面黑一下再恢复——证明写实时到了画面">🖥️ 黑屏自检</button>
