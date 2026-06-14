@@ -1,0 +1,46 @@
+{
+  "_comment": "RL6410 PHY 调试首批参数(黑屏+SSC 相关)。page/offset=寄存器地址; mask/shift=位域; live=是否在线即时生效(false=需 P1 override 表固化)。",
+  "groups": [
+    { "id": "freq", "label": "频率检测窗口" },
+    { "id": "cdr",  "label": "CDR / 展频跟踪" },
+    { "id": "dfe",  "label": "DFE / 眼质量" }
+  ],
+  "params": [
+    {
+      "name": "freq_offset", "group": "freq", "label": "频检容差档 (offset)",
+      "page": 113, "offset": 231, "mask": 7, "shift": 0,
+      "min": 0, "max": 7, "default": 2, "live": true,
+      "note": "P71_E7[2:0]。越大越宽容,放宽抗 SSC/抗误判黑屏。"
+    },
+    {
+      "name": "freq_stable", "group": "freq", "label": "频检稳定时间",
+      "page": 113, "offset": 236, "mask": 255, "shift": 0,
+      "min": 0, "max": 255, "default": 63, "live": true,
+      "note": "P71_EC。约 5ms=0x3F。影响判稳/判丢速度。"
+    },
+    {
+      "name": "cdr_icp", "group": "cdr", "label": "CDR 电荷泵 Icp",
+      "page": 123, "offset": 49, "mask": 15, "shift": 0,
+      "min": 0, "max": 15, "default": 10, "live": true,
+      "note": "P7B_31[3:0]。环路带宽核心,抬高以跟住 SSC 扫频。"
+    },
+    {
+      "name": "dfe_le_l0", "group": "dfe", "label": "DFE LE 初值 (L0)",
+      "page": 123, "offset": 162, "mask": 63, "shift": 0,
+      "min": 0, "max": 24, "default": 12, "live": false,
+      "note": "P7B_A2[5:0]。线性均衡高频提升,撑开垂直眼(SSC 点不亮主调)。需 P1 固化才稳定生效。"
+    },
+    {
+      "name": "dfe_le_l1", "group": "dfe", "label": "DFE LE 初值 (L1)",
+      "page": 123, "offset": 178, "mask": 63, "shift": 0,
+      "min": 0, "max": 24, "default": 12, "live": false,
+      "note": "P7B_B2[5:0]。同 L0,通道 1。需 P1 固化。"
+    },
+    {
+      "name": "dfe_le_l2", "group": "dfe", "label": "DFE LE 初值 (L2)",
+      "page": 123, "offset": 194, "mask": 63, "shift": 0,
+      "min": 0, "max": 24, "default": 12, "live": false,
+      "note": "P7B_C2[5:0]。同 L0,通道 2。需 P1 固化。"
+    }
+  ]
+}
