@@ -3,15 +3,59 @@
 <title>RL6410 PHY 调试</title>
 <style>
  :root{--bg:#0a0a0b;--card:#16161a;--line:#2a2a31;--txt:#e8e8ea;--sub:#8a8a93;
-   --accent:#5b6af0;--accent2:#8b5cf6;--green:#34d77b;--amber:#f5a623;}
+   --accent:#5b6af0;--accent2:#8b5cf6;--green:#34d77b;--amber:#f5a623;--bar:#121216;}
  *{box-sizing:border-box}
- body{font-family:Segoe UI,system-ui;background:var(--bg);color:var(--txt);margin:0;padding:14px;font-size:13px}
- h2{margin:0 0 2px;font-size:15px;font-weight:600}
- .bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+ html,body{height:100%}
+ body{font-family:Segoe UI,system-ui;background:var(--bg);color:var(--txt);margin:0;
+   font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+ h2{margin:0;font-size:14px;font-weight:600}
+
+ /* 窗口边/角缩放手柄 (WebView2 铺满整窗, 边缘缩放靠这些区域 + start_resize) */
+ .resz{position:fixed;z-index:9999}
+ .resz.t{top:0;left:9px;right:9px;height:5px;cursor:ns-resize}
+ .resz.b{bottom:0;left:9px;right:9px;height:5px;cursor:ns-resize}
+ .resz.l{left:0;top:9px;bottom:9px;width:5px;cursor:ew-resize}
+ .resz.r{right:0;top:9px;bottom:9px;width:5px;cursor:ew-resize}
+ .resz.tl{top:0;left:0;width:11px;height:11px;cursor:nwse-resize}
+ .resz.tr{top:0;right:0;width:11px;height:11px;cursor:nesw-resize}
+ .resz.bl{bottom:0;left:0;width:11px;height:11px;cursor:nesw-resize}
+ .resz.br{bottom:0;right:0;width:11px;height:11px;cursor:nwse-resize}
+
+ /* 自绘标题栏 (frameless 窗口: 拖动 + 关闭 + 最小化全靠它) */
+ .pbar{flex:none;display:flex;align-items:center;justify-content:space-between;
+   padding:10px 12px 10px 14px;background:var(--bar);border-bottom:1px solid var(--line);
+   cursor:default;-webkit-user-select:none;user-select:none}
+ .ttl{display:flex;align-items:center;gap:9px;min-width:0}
+ .ttl .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex:none;
+   box-shadow:0 0 6px rgba(52,215,123,.5)}
+ .winctl{display:flex;align-items:center;gap:6px}
+ .wbtn{width:30px;height:26px;display:grid;place-items:center;border:none;background:transparent;
+   color:var(--sub);cursor:pointer;border-radius:7px;transition:background .12s,color .12s}
+ .wbtn svg{width:16px;height:16px}
+ .wbtn:hover{background:#23232a;color:var(--txt)}
+ .wclose:hover{background:#e81123;color:#fff}
+
+ /* 滚动内容区 */
+ .scroll{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px 14px 14px}
+ .scroll::-webkit-scrollbar{width:9px}
+ .scroll::-webkit-scrollbar-thumb{background:#2a2a31;border-radius:8px;
+   border:2px solid transparent;background-clip:content-box}
+
+ .bar{display:flex;align-items:center;gap:10px;margin-bottom:6px}
  .sub{color:var(--sub);font-size:12px}
- button{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;color:#fff;
+ button.ghost{background:#23232a;color:var(--txt);border:1px solid var(--line);
    border-radius:7px;padding:6px 12px;cursor:pointer;font-size:12px}
- button.ghost{background:#23232a;color:var(--txt);border:1px solid var(--line)}
+
+ /* 怎么调 — 症状速查 */
+ .guide{background:#14131c;border:1px solid #2c2a3a;border-radius:11px;margin:8px 0 4px}
+ .guide summary{padding:9px 12px;cursor:pointer;font-weight:600;color:#cfc8ff;list-style:none;outline:none}
+ .guide summary::-webkit-details-marker{display:none}
+ .guide summary::before{content:'▸ ';color:var(--accent2)}
+ .guide[open] summary::before{content:'▾ '}
+ .guide .gbody{padding:0 12px 10px;font-size:12px;line-height:1.7;color:#c8c8d0}
+ .guide b{color:var(--amber)}
+ .guide code{background:#000;padding:1px 5px;border-radius:4px;color:var(--green);font-family:Consolas,monospace}
+
  .group{background:var(--card);border:1px solid var(--line);border-radius:11px;margin:10px 0;overflow:hidden}
  .ghead{padding:8px 12px;background:#202027;font-weight:600;border-bottom:1px solid var(--line)}
  .row{display:grid;grid-template-columns:1fr 150px 70px;gap:10px;align-items:center;
@@ -22,7 +66,7 @@
  .badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
  .b-live{background:rgba(52,215,123,.14);color:var(--green)}
  .b-p1{background:rgba(245,166,35,.14);color:var(--amber)}
- .note{color:var(--sub);font-size:11px}
+ .note{color:var(--sub);font-size:11px;line-height:1.5}
  input[type=range]{width:100%}
  .num{background:#101014;border:1px solid var(--line);color:var(--txt);border-radius:6px;
    padding:5px 6px;width:100%;text-align:center;font-family:Consolas,monospace}
@@ -32,14 +76,46 @@
    border-radius:8px;padding:8px}
 </style></head>
 <body>
- <div class="bar">
-   <div style="flex:1">
-     <h2>RL6410 PHY 调试</h2>
-     <div class="sub" id="board">枚举显示器…</div>
-   </div>
-   <button class="ghost" onclick="refreshAll()">↻ 读取全部</button>
+ <!-- 缩放手柄 -->
+ <div class="resz t"  data-ht="12"></div><div class="resz b"  data-ht="15"></div>
+ <div class="resz l"  data-ht="10"></div><div class="resz r"  data-ht="11"></div>
+ <div class="resz tl" data-ht="13"></div><div class="resz tr" data-ht="14"></div>
+ <div class="resz bl" data-ht="16"></div><div class="resz br" data-ht="17"></div>
+
+ <!-- 标题栏: 整条可拖动; 按钮簇标 no-drag -->
+ <div class="pbar pywebview-drag-region">
+   <span class="ttl"><span class="dot"></span><h2>RL6410 PHY 调试</h2></span>
+   <span class="winctl pywebview-no-drag">
+     <button id="win-min" class="wbtn" title="最小化" aria-label="最小化">
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14"/></svg>
+     </button>
+     <button id="win-close" class="wbtn wclose" title="关闭" aria-label="关闭">
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg>
+     </button>
+   </span>
  </div>
- <div id="groups"></div>
- <div id="log"></div>
+
+ <div class="scroll">
+   <div class="bar">
+     <div class="sub" id="board" style="flex:1">枚举显示器…</div>
+     <button class="ghost" onclick="refreshAll()">↻ 读取全部</button>
+   </div>
+
+   <details class="guide">
+     <summary>怎么调？按症状对照</summary>
+     <div class="gbody">
+       • <b>主机开 SSC 后点不亮 / 花屏</b> → 先把 <code>CDR Icp</code> 往上抬 1~2 档(跟住扫频),不行再把
+         <code>DFE LE L0/L1/L2</code> 三个一起 +2~+4(撑开眼图)。DFE 是黄标,需 P1 固化才稳。<br>
+       • <b>偶发瞬间黑屏后自己恢复</b> → 把 <code>频检容差档</code> +1~+2(放宽判丢门槛),
+         再把 <code>频检稳定时间</code> 适当加大(别太频繁判稳/判丢)。<br>
+       • <b>长线 / 劣质线材发虚、闪点</b> → 主调 <code>DFE LE</code> 三档一起加(补线损高频衰减)。<br>
+       • <b>一切正常想压裕量做实验</b> → 任意项往回拉,看从第几档开始出问题,即为该链路余量边界。<br>
+       <span style="color:#888">单项小步动(±1~±2),每动一步等 1~2 秒看现象再继续。黄标项真正稳定生效需做 P1 固化。</span>
+     </div>
+   </details>
+
+   <div id="groups"></div>
+   <div id="log"></div>
+ </div>
  <script src="app.js"></script>
 </body></html>

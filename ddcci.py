@@ -12,19 +12,31 @@ DDC/CI 上位机 CLI —— 通过 DDC/CI 控制 Realtek RL6432 显示器。
   py -3 ddcci.py set  <vcp> <val>     写 VCP 值
   py -3 ddcci.py probe [idx]          链路自检: 读亮度 -> 调暗 -> 调亮 -> 复原
   py -3 ddcci.py gamma <n> [idx]      切 gamma (= set 0x72 n), 需固件支持后才生效
-  (所有命令末尾可带显示器序号 idx, 默认 0; 用 list 看序号)
+  py -3 ddcci.py key <名称...> [idx]  注入面板按键(= set 0xF0), 可一次多个键依次按
+                                      键名: menu/exit/left/right (别名 ok/back/+/-/up/down)
+                                      idx 省略时自动认 RTK 板; 例: key menu right right menu
+  (其余命令末尾可带显示器序号 idx, 默认 0; 用 list 看序号)
 """
 import sys
 
-from ddcci_core import select_backend
+from ddcci_core import select_backend, pick_default_monitor
 
 # ---- VCP 常量 (与固件 UserCommonDdcciDefine.h 对应) ----
 VCP_BACKLIGHT = 0x10   # 固件映射到背光/亮度
 VCP_CONTRAST  = 0x12
 VCP_COLOR_PRESET = 0x14
 VCP_GAMMA     = 0x72
+VCP_KEY_INJECT = 0xF0   # 厂商私有: 注入面板按键(等效实体按键), 固件 RTD2014Ddcci.c 解析
 
 GAMMA_NAMES = {0: "OFF", 1: "1.8", 2: "2.0", 3: "2.2", 4: "2.4"}
+
+# 按键名 -> 注入码 (与固件 case 对应: 1=MENU 2=EXIT 3=LEFT 4=RIGHT)
+KEY_CODES = {
+    "menu": 1, "ok": 1, "enter": 1,
+    "exit": 2, "back": 2,
+    "left": 3, "-": 3, "minus": 3, "down": 3,
+    "right": 4, "+": 4, "plus": 4, "up": 4,
+}
 
 
 def _parse_code(s):
@@ -110,6 +122,28 @@ def cmd_gamma(n, idx):
                 print("  读回确认: gamma = %d (%s)" % (r[0], GAMMA_NAMES.get(r[0], "?")))
 
 
+def cmd_key(names, idx):
+    """依次注入面板按键: 每个键 set 0xF0 <code>。固件靠 g_ucKeyStateSkip 把键留给 OSD 消费。
+
+    names: 键名列表 (menu/exit/left/right/...)。idx 省略(None)时自动认 RTK 板。
+    """
+    bad = [n for n in names if n.lower() not in KEY_CODES]
+    if bad:
+        print("未知按键 %s。可用: %s" % (", ".join(bad), ", ".join(sorted(KEY_CODES))))
+        return
+    with select_backend() as be:
+        if idx is None:
+            idx = pick_default_monitor(be, "RTK")   # 认 caps model(RTK) 的板, 接线变了也不用改号
+            if idx is None:
+                sys.exit("没有找到物理显示器。检查: 板子是否接到显卡, 显卡 DDC/CI 是否开。")
+        _need(be, idx)
+        for n in names:
+            code = KEY_CODES[n.lower()]
+            ok = be.set_vcp(idx, VCP_KEY_INJECT, code)
+            print("按键 %-6s (0xF0 <- %d) : %s" % (
+                n, code, "OK" if ok else "失败(只写VCP, 以屏幕为准)"))
+
+
 def main():
     a = sys.argv[1:]
     if not a:
@@ -129,6 +163,17 @@ def main():
             cmd_probe(int(a[1]) if len(a) > 1 else 0)
         elif cmd == "gamma":
             cmd_gamma(int(a[1]), int(a[2]) if len(a) > 2 else 0)
+        elif cmd == "key":
+            names, idx = [], None
+            for t in a[1:]:                 # 纯数字 token 当 idx, 其余当键名
+                if t.isdigit():
+                    idx = int(t)
+                else:
+                    names.append(t)
+            if not names:
+                print("用法: key <名称...> [idx]   例: key menu  /  key menu right right menu")
+            else:
+                cmd_key(names, idx)
         else:
             print("未知命令 %r\n" % cmd)
             print(__doc__)

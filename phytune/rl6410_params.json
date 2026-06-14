@@ -10,37 +10,37 @@
       "name": "freq_offset", "group": "freq", "label": "频检容差档 (offset)",
       "page": 113, "offset": 231, "mask": 7, "shift": 0,
       "min": 0, "max": 7, "default": 2, "live": true,
-      "note": "P71_E7[2:0]。越大越宽容,放宽抗 SSC/抗误判黑屏。"
+      "note": "P71_E7[2:0] 频率判定容差。↑放宽=不轻易判\"信号丢\"(治偶发黑屏自恢复/抗SSC),太大可能漏判真丢失；↓收紧=对异常更敏感。黑屏发作就从 2 起每次 +1 试到 4~5。"
     },
     {
       "name": "freq_stable", "group": "freq", "label": "频检稳定时间",
       "page": 113, "offset": 236, "mask": 255, "shift": 0,
       "min": 0, "max": 255, "default": 63, "live": true,
-      "note": "P71_EC。约 5ms=0x3F。影响判稳/判丢速度。"
+      "note": "P71_EC 判稳时间(约 5ms=63)。↑=要连续稳更久才认\"锁定\",抗抖动误判,但恢复显示更慢；↓=认得快但易被瞬态干扰骗。黑屏频繁就从 63 加到 80~100。"
     },
     {
       "name": "cdr_icp", "group": "cdr", "label": "CDR 电荷泵 Icp",
       "page": 123, "offset": 49, "mask": 15, "shift": 0,
       "min": 0, "max": 15, "default": 10, "live": true,
-      "note": "P7B_31[3:0]。环路带宽核心,抬高以跟住 SSC 扫频。"
+      "note": "P7B_31[3:0] CDR 电荷泵电流=环路带宽。↑=环路更快,能跟住 SSC 扫频(治开SSC点不亮),但太高会引入抖动、画面闪点；↓=更稳但跟不上快速频偏。SSC 点不亮就从 10 起每次 +1 试到 12~13,出闪点再退回。"
     },
     {
       "name": "dfe_le_l0", "group": "dfe", "label": "DFE LE 初值 (L0)",
       "page": 123, "offset": 162, "mask": 63, "shift": 0,
       "min": 0, "max": 24, "default": 12, "live": false,
-      "note": "P7B_A2[5:0]。线性均衡高频提升,撑开垂直眼(SSC 点不亮主调)。需 P1 固化才稳定生效。"
+      "note": "P7B_A2[5:0] 通道0 线性均衡高频提升量。↑=补线损、撑开垂直眼(治长线/劣质线发虚、SSC点不亮),过高会过均衡反而引入噪声；↓=均衡弱。L0/L1/L2 三通道一般一起加。从 12 起每次 +2 试到 16~18。⚠需 P1 固化否则重锁被覆盖。"
     },
     {
       "name": "dfe_le_l1", "group": "dfe", "label": "DFE LE 初值 (L1)",
       "page": 123, "offset": 178, "mask": 63, "shift": 0,
       "min": 0, "max": 24, "default": 12, "live": false,
-      "note": "P7B_B2[5:0]。同 L0,通道 1。需 P1 固化。"
+      "note": "P7B_B2[5:0] 通道1 高频提升量。作用同 L0,与 L0/L2 一起等量调。从 12 起 +2 试到 16~18。⚠需 P1 固化。"
     },
     {
       "name": "dfe_le_l2", "group": "dfe", "label": "DFE LE 初值 (L2)",
       "page": 123, "offset": 194, "mask": 63, "shift": 0,
       "min": 0, "max": 24, "default": 12, "live": false,
-      "note": "P7B_C2[5:0]。同 L0,通道 2。需 P1 固化。"
+      "note": "P7B_C2[5:0] 通道2 高频提升量。作用同 L0,与 L0/L1 一起等量调。从 12 起 +2 试到 16~18。⚠需 P1 固化。"
     }
   ]
 }

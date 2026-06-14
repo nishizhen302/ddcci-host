@@ -93,7 +93,35 @@ async function refreshAll() {
   }
 }
 
+// frameless 窗口: 关闭/最小化/边角缩放/拖动全靠前端接到 Api(同主 UI 机制)。
+function wireWindowChrome() {
+  const min = el('win-min'), close = el('win-close');
+  if (min) min.addEventListener('click', () => api().minimize_window());
+  if (close) close.addEventListener('click', () => api().close_window());
+  // 边/角缩放: pointerdown 交给系统原生缩放循环
+  document.querySelectorAll('.resz').forEach(elm => {
+    elm.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      api().start_resize(Number(elm.dataset.ht));
+    });
+  });
+  // 标题栏拖动: WebView2(Win11) 由 pywebview-drag-region 原生处理;
+  // QtWebEngine(Win7) 不认 drag-region, 手动用 HTCAPTION(2) 走系统移动循环。
+  if (navigator.userAgent.includes('QtWebEngine')) {
+    const HTCAPTION = 2;
+    document.querySelectorAll('.pywebview-drag-region').forEach(bar => {
+      bar.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        if (e.target.closest('.pywebview-no-drag')) return;
+        e.preventDefault();
+        api().start_resize(HTCAPTION);
+      });
+    });
+  }
+}
+
 async function boot() {
+  wireWindowChrome();
   await pickBoard();
   await buildUI();
   await refreshAll();
