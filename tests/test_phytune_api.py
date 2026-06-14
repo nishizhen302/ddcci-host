@@ -54,3 +54,38 @@ def test_api_param_write_read_modify_write():
     r = api.phytune_param_write("dfe_le_l0", 20, 0)
     assert r["ok"] is True
     assert be.sets[-1] == (0, vc.VCP_POKE, 0x0094)
+
+
+def test_api_override_pin_uses_param_slot():
+    be = FakeBackend()
+    api = _api_with_fake(be)
+    r = api.phytune_override_pin("dfe_le_l0", 0)   # slot 0, P7B_A2 = 0x7BA2
+    assert r == {"ok": True, "slot": 0}
+    assert be.sets == [
+        (0, vc.VCP_ADDR_LATCH, 0x7BA2),
+        (0, vc.VCP_OVERRIDE, (vc.OVERRIDE_OP_PIN << 8) | 0),
+    ]
+
+
+def test_api_override_pin_rejects_live_param():
+    be = FakeBackend()
+    api = _api_with_fake(be)
+    r = api.phytune_override_pin("freq_offset", 0)   # live, slot=None
+    assert r["ok"] is False
+    assert be.sets == []
+
+
+def test_api_override_clear_sends_clear():
+    be = FakeBackend()
+    api = _api_with_fake(be)
+    r = api.phytune_override_clear("dfe_le_l1", 0)    # slot 1
+    assert r["ok"] is True
+    assert be.sets == [(0, vc.VCP_OVERRIDE, (vc.OVERRIDE_OP_CLEAR << 8) | 1)]
+
+
+def test_api_override_clearall():
+    be = FakeBackend()
+    api = _api_with_fake(be)
+    r = api.phytune_override_clearall(0)
+    assert r["ok"] is True
+    assert be.sets == [(0, vc.VCP_OVERRIDE, (vc.OVERRIDE_OP_CLEARALL << 8) | 0)]

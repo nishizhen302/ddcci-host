@@ -27,3 +27,22 @@ class RegAccess:
             return False
         return self._be.set_vcp(self._mon, vc.VCP_POKE,
                                 vc.pack_poke(data, type_))
+
+    def override_pin(self, page, offset, slot):
+        """[P1] 钉住 page/offset 当前值到 override 槽 slot(重锁后固件自动盖回)。
+        先锁存地址, 再发 PIN; 固件按锁存地址读现值存槽。失败返回 False。"""
+        if not self._be.set_vcp(self._mon, vc.VCP_ADDR_LATCH,
+                                vc.pack_addr(page, offset)):
+            return False
+        return self._be.set_vcp(self._mon, vc.VCP_OVERRIDE,
+                                vc.pack_override(vc.OVERRIDE_OP_PIN, slot))
+
+    def override_clear(self, slot):
+        """[P1] 清除 override 槽 slot。失败返回 False。"""
+        return self._be.set_vcp(self._mon, vc.VCP_OVERRIDE,
+                                vc.pack_override(vc.OVERRIDE_OP_CLEAR, slot))
+
+    def override_clearall(self):
+        """[P1] 清空整张 override 表。失败返回 False。"""
+        return self._be.set_vcp(self._mon, vc.VCP_OVERRIDE,
+                                vc.pack_override(vc.OVERRIDE_OP_CLEARALL, 0))

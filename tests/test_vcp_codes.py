@@ -31,3 +31,16 @@ def test_pack_poke_rejects_bad():
         vc.pack_poke(0x100)
     with pytest.raises(ValueError):
         vc.pack_poke(0x10, type_=2)
+
+
+def test_pack_override_encodes_op_high_byte():
+    assert vc.pack_override(vc.OVERRIDE_OP_PIN, 2) == 0x0002
+    assert vc.pack_override(vc.OVERRIDE_OP_CLEAR, 1) == 0x0101
+    assert vc.pack_override(vc.OVERRIDE_OP_CLEARALL) == 0x0200
+
+
+def test_pack_override_rejects_bad():
+    with pytest.raises(ValueError):
+        vc.pack_override(9, 0)
+    with pytest.raises(ValueError):
+        vc.pack_override(vc.OVERRIDE_OP_PIN, 0x100)

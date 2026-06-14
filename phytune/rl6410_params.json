@@ -27,19 +27,19 @@
     {
       "name": "dfe_le_l0", "group": "dfe", "label": "DFE LE 初值 (L0)",
       "page": 123, "offset": 162, "mask": 63, "shift": 0,
-      "min": 0, "max": 24, "default": 12, "live": false,
+      "min": 0, "max": 24, "default": 12, "live": false, "slot": 0,
       "note": "P7B_A2[5:0] 通道0 线性均衡高频提升量。↑=补线损、撑开垂直眼(治长线/劣质线发虚、SSC点不亮),过高会过均衡反而引入噪声；↓=均衡弱。L0/L1/L2 三通道一般一起加。从 12 起每次 +2 试到 16~18。⚠需 P1 固化否则重锁被覆盖。"
     },
     {
       "name": "dfe_le_l1", "group": "dfe", "label": "DFE LE 初值 (L1)",
       "page": 123, "offset": 178, "mask": 63, "shift": 0,
-      "min": 0, "max": 24, "default": 12, "live": false,
+      "min": 0, "max": 24, "default": 12, "live": false, "slot": 1,
       "note": "P7B_B2[5:0] 通道1 高频提升量。作用同 L0,与 L0/L2 一起等量调。从 12 起 +2 试到 16~18。⚠需 P1 固化。"
     },
     {
       "name": "dfe_le_l2", "group": "dfe", "label": "DFE LE 初值 (L2)",
       "page": 123, "offset": 194, "mask": 63, "shift": 0,
-      "min": 0, "max": 24, "default": 12, "live": false,
+      "min": 0, "max": 24, "default": 12, "live": false, "slot": 2,
       "note": "P7B_C2[5:0] 通道2 高频提升量。作用同 L0,与 L0/L1 一起等量调。从 12 起 +2 试到 16~18。⚠需 P1 固化。"
     }
   ]

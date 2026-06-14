@@ -10,7 +10,12 @@ E5~E7 是该 MCCS 厂商区里实测空闲的值。
 
 VCP_ADDR_LATCH = 0xE5   # SET: page<<8|offset 锁存地址; GET: peek 返回当前值
 VCP_POKE = 0xE6         # SET: type<<8|data 写入锁存地址
-VCP_OVERRIDE = 0xE7     # SET: op<<8|slot 操作 override 表
+VCP_OVERRIDE = 0xE7     # SET: op<<8|slot 操作 override 表 (P1)
+
+# override 表操作码, 与固件 RL6410_Series_TMDSRx2Include.h 的 _PHY_OVERRIDE_OP_* 对齐
+OVERRIDE_OP_PIN = 0       # 把锁存地址处现值钉进槽 (槽号=slot)
+OVERRIDE_OP_CLEAR = 1     # 清单个槽
+OVERRIDE_OP_CLEARALL = 2  # 清全部槽
 
 
 def pack_addr(page, offset):
@@ -34,3 +39,12 @@ def pack_poke(data, type_=0):
     if type_ not in (0, 1):
         raise ValueError("type 只能 0/1: %r" % (type_,))
     return (type_ << 8) | data
+
+
+def pack_override(op, slot=0):
+    """op(8bit) + slot(8bit) -> 16bit 载荷 (op<<8|slot)。"""
+    if op not in (OVERRIDE_OP_PIN, OVERRIDE_OP_CLEAR, OVERRIDE_OP_CLEARALL):
+        raise ValueError("op 非法: %r" % (op,))
+    if not (0 <= slot <= 0xFF):
+        raise ValueError("slot 越界: %r" % (slot,))
+    return (op << 8) | slot

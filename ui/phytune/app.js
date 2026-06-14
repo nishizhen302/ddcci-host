@@ -44,7 +44,7 @@ function rowFor(p) {
   num.className = 'num'; num.type = 'number'; num.min = p.min; num.max = p.max; num.value = p.default;
   const cur = document.createElement('div'); cur.className = 'cur'; cur.textContent = '当前 …';
 
-  const rec = { def: p, slider, num, cur, last: p.default };
+  const rec = { def: p, slider, num, cur, last: p.default, pinned: false, pinBtn: null };
   PARAMS[p.name] = rec;
 
   // 拖动时只更新数字显示(纯 UI, 流畅); 松手(change)才真正写一次寄存器。
@@ -57,8 +57,40 @@ function rowFor(p) {
 
   row.appendChild(left); row.appendChild(slider);
   const right = document.createElement('div'); right.appendChild(num); right.appendChild(cur);
+  // P1: 非在线参数(slot!=null)给个"钉住"按钮, 把当前值固化到 override 槽(重锁后固件自动盖回)。
+  if (!p.live && p.slot !== null && p.slot !== undefined) {
+    const pin = document.createElement('button');
+    pin.className = 'pin'; pin.textContent = '📌 钉住';
+    pin.title = '把当前值固化, 信号重锁后不被默认值覆盖';
+    pin.addEventListener('click', () => togglePin(p.name));
+    rec.pinBtn = pin;
+    right.appendChild(pin);
+  }
   row.appendChild(right);
   return row;
+}
+
+async function togglePin(name) {
+  const rec = PARAMS[name];
+  try {
+    if (!rec.pinned) {
+      // 先确保当前滑杆值已写进寄存器(固件 PIN 抓的是寄存器现值), 再钉住。
+      await writeParam(name, +rec.slider.value);
+      const r = await api().phytune_override_pin(name, MON);
+      if (r && r.ok) { rec.pinned = true; paintPin(rec); log(`已固化 ${name} → 槽${r.slot}`); }
+      else { log(`固化 ${name} 失败: ${(r && r.error) || ''}`); }
+    } else {
+      const r = await api().phytune_override_clear(name, MON);
+      if (r && r.ok) { rec.pinned = false; paintPin(rec); log(`已取消固化 ${name}`); }
+      else { log(`取消固化 ${name} 失败: ${(r && r.error) || ''}`); }
+    }
+  } catch (e) { log(`固化 ${name} 异常: ${e}`); }
+}
+
+function paintPin(rec) {
+  if (!rec.pinBtn) return;
+  rec.pinBtn.textContent = rec.pinned ? '✅ 已固化' : '📌 钉住';
+  rec.pinBtn.classList.toggle('on', rec.pinned);
 }
 
 const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;

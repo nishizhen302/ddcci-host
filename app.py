@@ -359,6 +359,40 @@ class Api:
         except Exception as e:
             return _err(e)
 
+    # ---- PHY 调试 P1: override 表(让重锁后被覆盖的 DFE 值固化)----
+    def phytune_override_pin(self, name, mon_id):
+        """把参数当前值钉进它的固定 override 槽; 固件重锁后自动盖回。"""
+        try:
+            p = self._model().by_name(name)
+            if p.slot is None:
+                return {"ok": False, "error": "%s 是在线参数, 无需固化" % name}
+            ra = RegAccess(self._ensure(), int(mon_id))
+            ok = ra.override_pin(p.page, p.offset, p.slot)
+            return {"ok": True, "slot": p.slot} if ok else {"ok": False, "error": "钉住 %s 失败" % name}
+        except Exception as e:
+            return _err(e)
+
+    def phytune_override_clear(self, name, mon_id):
+        """取消固化某参数(清它的 override 槽)。"""
+        try:
+            p = self._model().by_name(name)
+            if p.slot is None:
+                return {"ok": False, "error": "%s 无 override 槽" % name}
+            ra = RegAccess(self._ensure(), int(mon_id))
+            ok = ra.override_clear(p.slot)
+            return {"ok": True} if ok else {"ok": False, "error": "清除 %s 失败" % name}
+        except Exception as e:
+            return _err(e)
+
+    def phytune_override_clearall(self, mon_id):
+        """清空整张 override 表。"""
+        try:
+            ra = RegAccess(self._ensure(), int(mon_id))
+            ok = ra.override_clearall()
+            return {"ok": True} if ok else {"ok": False, "error": "清空 override 表失败"}
+        except Exception as e:
+            return _err(e)
+
     def set_backend(self, name):
         try:
             if self._be is not None:

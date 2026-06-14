@@ -14,7 +14,7 @@ class Param(object):
     """一个具名可调参数。"""
 
     __slots__ = ("name", "group", "label", "page", "offset", "mask", "shift",
-                 "min", "max", "default", "live", "note")
+                 "min", "max", "default", "live", "note", "slot")
 
     def __init__(self, d):
         self.name = d["name"]
@@ -29,6 +29,10 @@ class Param(object):
         self.default = int(d.get("default", d["min"]))
         self.live = bool(d.get("live", True))
         self.note = d.get("note", "")
+        # P1: 非在线参数固定 override 槽位 (重锁后固化); 在线参数无需固化, slot=None
+        self.slot = d.get("slot", None)
+        if self.slot is not None:
+            self.slot = int(self.slot)
 
     def read(self, ra):
         """读回当前位域值; peek 失败返回 None。"""
@@ -53,7 +57,7 @@ class Param(object):
         return {"name": self.name, "group": self.group, "label": self.label,
                 "page": self.page, "offset": self.offset,
                 "min": self.min, "max": self.max, "default": self.default,
-                "live": self.live, "note": self.note}
+                "live": self.live, "note": self.note, "slot": self.slot}
 
 
 class ParamModel(object):

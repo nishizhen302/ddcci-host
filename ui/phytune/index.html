@@ -58,7 +58,7 @@
 
  .group{background:var(--card);border:1px solid var(--line);border-radius:11px;margin:10px 0;overflow:hidden}
  .ghead{padding:8px 12px;background:#202027;font-weight:600;border-bottom:1px solid var(--line)}
- .row{display:grid;grid-template-columns:1fr 150px 70px;gap:10px;align-items:center;
+ .row{display:grid;grid-template-columns:1fr 138px 80px;gap:10px;align-items:center;
    padding:9px 12px;border-bottom:1px solid #202026}
  .row:last-child{border-bottom:0}
  .pname{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -71,6 +71,10 @@
  .num{background:#101014;border:1px solid var(--line);color:var(--txt);border-radius:6px;
    padding:5px 6px;width:100%;text-align:center;font-family:Consolas,monospace}
  .cur{color:var(--sub);font-size:12px;text-align:center;font-family:Consolas,monospace}
+ .pin{margin-top:5px;width:100%;font-size:11px;padding:4px 0;border-radius:6px;cursor:pointer;
+   background:#23232a;color:var(--amber);border:1px solid #3a3320;white-space:nowrap}
+ .pin:hover{background:#2c2a1c}
+ .pin.on{background:rgba(52,215,123,.16);color:var(--green);border-color:#2c5a3a}
  #log{margin-top:12px;font-family:Consolas,monospace;font-size:11px;white-space:pre-wrap;
    color:#9aa;max-height:120px;overflow:auto;background:#0e0e11;border:1px solid var(--line);
    border-radius:8px;padding:8px}
