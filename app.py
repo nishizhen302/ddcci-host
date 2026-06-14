@@ -367,9 +367,10 @@ class Api:
 
 def main():
     api = Api()
+    page = "phytune/index.html" if os.environ.get("DDCCI_PHYTUNE") else "index.html"
     window = webview.create_window(
         WIN_TITLE,
-        os.path.join(HERE, "ui", "index.html"),
+        os.path.join(HERE, "ui", page),
         js_api=api,
         width=500, height=840, min_size=(460, 640),
         background_color="#0a0a0b",  # 默认白, 改深色避免顶部露白缝
