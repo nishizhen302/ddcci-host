@@ -4,9 +4,9 @@ from phytune import vcp_codes as vc
 
 
 def test_opcodes_in_reserved_range():
-    assert vc.VCP_ADDR_LATCH == 0xE0
-    assert vc.VCP_POKE == 0xE1
-    assert vc.VCP_OVERRIDE == 0xE2
+    assert vc.VCP_ADDR_LATCH == 0xE5
+    assert vc.VCP_POKE == 0xE6
+    assert vc.VCP_OVERRIDE == 0xE7
 
 
 def test_pack_addr_roundtrip():

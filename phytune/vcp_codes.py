@@ -3,11 +3,14 @@
 
 与固件 UserCommonDdcciDefine.h 的 _DDCCI_OPCODE_DBG_* 一一对应。
 DDC/CI 一次 SET VCP 只能带 16bit value, 故地址/数据分别编码。
+
+操作码取 0xE5/E6/E7: 固件 0xE0~E4(校准步骤)/E3(CONTROL_LOCK)/EE/F0/F1/F3/FD 已占,
+E5~E7 是该 MCCS 厂商区里实测空闲的值。
 """
 
-VCP_ADDR_LATCH = 0xE0   # SET: page<<8|offset 锁存地址; GET: peek 返回当前值
-VCP_POKE = 0xE1         # SET: type<<8|data 写入锁存地址
-VCP_OVERRIDE = 0xE2     # SET: op<<8|slot 操作 override 表
+VCP_ADDR_LATCH = 0xE5   # SET: page<<8|offset 锁存地址; GET: peek 返回当前值
+VCP_POKE = 0xE6         # SET: type<<8|data 写入锁存地址
+VCP_OVERRIDE = 0xE7     # SET: op<<8|slot 操作 override 表
 
 
 def pack_addr(page, offset):
