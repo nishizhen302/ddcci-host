@@ -8,9 +8,30 @@ from phytune import params as P
 
 def test_load_params_has_groups_and_params():
     model = P.load_params()
-    assert {g["id"] for g in model.groups} == {"freq", "cdr", "dfe"}
+    assert {g["id"] for g in model.groups} == {"freq", "cdr", "dfe", "ssc"}
     names = {p.name for p in model.params}
     assert {"freq_offset", "freq_stable", "cdr_icp", "dfe_le_l0", "dfe_le_l1", "dfe_le_l2"} <= names
+
+
+def test_signal_quality_params_fields_and_unique_slots():
+    m = P.load_params()
+    expect = {            # name: (offset, mask, shift, slot)
+        "dfe_adapt_mode": (0xE0, 0xC0, 6, 4),
+        "dfe_tap1_l0":    (0xA5, 0x3F, 0, 5),
+        "cdr_cp":         (0x1E, 0x30, 4, 8),
+        "cdr_rs":         (0x1E, 0x07, 0, 9),
+        "cdr_wide_temp":  (0x2D, 0x20, 5, 10),
+        "vco_band_l0":    (0x32, 0x7F, 0, 11),
+        "fld_auto_mode":  (0x2B, 0x80, 7, 14),
+    }
+    for name, (off, mask, shift, slot) in expect.items():
+        p = m.by_name(name)
+        assert (p.offset, p.mask, p.shift, p.slot) == (off, mask, shift, slot), name
+        assert p.page == 0x7B and p.live is False
+        assert p.eff_page(3) == 0x7C          # D3 端口偏移
+    slots = [p.slot for p in m.params if p.slot is not None]
+    assert len(slots) == len(set(slots)), "override 槽冲突"
+    assert max(slots) < 16, "槽号超出固件 16 槽上限"
 
 
 def test_param_lookup_and_fields():

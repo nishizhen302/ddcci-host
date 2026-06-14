@@ -183,6 +183,19 @@ async function _blankTestInner() {
   finally { if (b) b.disabled = false; }
 }
 
+// 应急: 一键清空 override 表 + 复位所有📌状态。现场钉了坏值黑屏循环时救场。
+function clearAllPins() { return lock(_clearAllPinsInner); }
+async function _clearAllPinsInner() {
+  const r = await api().phytune_override_clearall(MON);
+  if (r && r.ok) {
+    for (const name of Object.keys(PARAMS)) {
+      const rec = PARAMS[name];
+      if (rec.pinned) { rec.pinned = false; paintPin(rec); }
+    }
+    log('已清空所有固化(override 表)→ 下次重锁全部回固件默认。');
+  } else log('清空固化失败: ' + ((r && r.error) || ''));
+}
+
 function refreshAll() { return lock(_refreshAllInner); }
 async function _refreshAllInner() {
   spin(true);

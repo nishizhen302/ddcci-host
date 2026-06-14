@@ -37,7 +37,7 @@ def test_api_phytune_params_lists_groups_and_params():
     api = _api_with_fake(FakeBackend())
     r = api.phytune_params()
     assert r["ok"] is True
-    assert {g["id"] for g in r["groups"]} == {"freq", "cdr", "dfe"}
+    assert {g["id"] for g in r["groups"]} == {"freq", "cdr", "dfe", "ssc"}
     assert any(p["name"] == "freq_offset" for p in r["params"])
 
 
