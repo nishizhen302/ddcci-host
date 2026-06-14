@@ -3,19 +3,10 @@ rem (Keep this file ASCII-only: cmd parses .bat in the system codepage, UTF-8 Ch
 cd /d "%~dp0"
 set DDCCI_PHYTUNE=1
 
-rem UI needs the bundled Python 3.8 venv (has pywebview + PyQt5, Qt backend).
-rem System "py -3" has no pywebview. app_win7.py forces the Qt backend + handles high DPI.
-set PYEXE=.venv38\Scripts\python.exe
-
-if not exist "%PYEXE%" (
-  echo [ERROR] cannot find %PYEXE%
-  echo Run this file from inside C:\code\ddcci-host
-  pause
-  exit /b 1
-)
-
-echo Starting RL6410 PHY tuning UI ...
-"%PYEXE%" app_win7.py
+rem Win11: use system py -3 (3.14) which has pywebview + WebView2(edgechromium) = smooth.
+rem No Qt backend (QtWebEngine sliders felt laggy). app.py auto-selects WebView2 when DDCCI_GUI unset.
+echo Starting RL6410 PHY tuning UI (WebView2) ...
+py -3 app.py
 
 echo.
 echo (UI process ended. If there is an error above, send it to me.)

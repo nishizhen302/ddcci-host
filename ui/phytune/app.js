@@ -6,7 +6,6 @@ const log = m => { el('log').textContent =
   new Date().toLocaleTimeString() + '  ' + m + '\n' + el('log').textContent; };
 
 const PARAMS = {};          // name -> {def, slider, num, cur, last}
-let writeTimer = null;      // 拖动节流
 
 async function pickBoard() {
   try {
@@ -48,8 +47,9 @@ function rowFor(p) {
   const rec = { def: p, slider, num, cur, last: p.default };
   PARAMS[p.name] = rec;
 
-  // 拖动: 实时同步数字, 节流写入
-  slider.addEventListener('input', () => { num.value = slider.value; scheduleWrite(p.name, +slider.value); });
+  // 拖动时只更新数字显示(纯 UI, 流畅); 松手(change)才真正写一次寄存器。
+  // DDC/CI 每次读写要走 I²C 来回(慢), 拖动途中写会卡顿, 故只在释放时写。
+  slider.addEventListener('input', () => { num.value = slider.value; });
   slider.addEventListener('change', () => writeParam(p.name, +slider.value));
   num.addEventListener('change', () => {
     let v = clamp(+num.value, p.min, p.max); num.value = v; slider.value = v; writeParam(p.name, v);
@@ -62,11 +62,6 @@ function rowFor(p) {
 }
 
 const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
-
-function scheduleWrite(name, v) {
-  if (writeTimer) clearTimeout(writeTimer);
-  writeTimer = setTimeout(() => writeParam(name, v), 120);
-}
 
 async function writeParam(name, v) {
   const rec = PARAMS[name];
