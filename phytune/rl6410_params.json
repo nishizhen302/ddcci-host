@@ -41,6 +41,12 @@
       "page": 123, "offset": 194, "mask": 63, "shift": 0,
       "min": 0, "max": 24, "default": 12, "live": false, "slot": 2,
       "note": "P7B_C2[5:0] 通道2 高频提升量。作用同 L0,与 L0/L1 一起等量调。从 12 起 +2 试到 16~18。⚠需 P1 固化。"
+    },
+    {
+      "name": "dfe_adapt_off", "group": "dfe", "label": "关闭DFE自适应 (0开/1关)",
+      "page": 123, "offset": 43, "mask": 16, "shift": 4,
+      "min": 0, "max": 1, "default": 0, "live": false, "slot": 3,
+      "note": "P7B_2B[4] reg_adp_eq_off。=1 关掉 DFE 闭环自适应→均衡器被钉死,这时改 LE 才在好线上看得出眼图塌(自适应不再纠偏)。做法:此项设1+📌、LE设低值+📌,再拔插重锁。⚠重锁会被覆盖,必须📌固化。"
     }
   ]
 }

@@ -393,6 +393,25 @@ class Api:
         except Exception as e:
             return _err(e)
 
+    def phytune_output_enable(self, mon_id, on, port=2):
+        """[自检 B] 开/关当前端口 TMDS RGB 输出 (P71_A6[6:4], 按端口偏移)。
+        关=画面立刻黑, 开=恢复。这是固件 AVMute 用的同一个使能, 安全可逆。
+        用来肉眼证明"写实时到了硅片/画面"。"""
+        try:
+            port = int(port)
+            if not (2 <= port <= 5):
+                return {"ok": False, "error": "port 只能 2~5"}
+            page = 0x71 + (port - 2)          # 频检/控制页随端口偏移: D2=0x71 D3=0x72...
+            ra = RegAccess(self._ensure(), int(mon_id))
+            cur = ra.peek(page, 0xA6)
+            if cur is None:
+                return {"ok": False, "error": "读 P%02X_A6 失败" % page}
+            newb = (cur | 0x70) if on else (cur & ~0x70)   # bit[6:5:4] = RGB 输出使能
+            ok = ra.poke(page, 0xA6, newb)
+            return {"ok": True} if ok else {"ok": False, "error": "写输出使能失败"}
+        except Exception as e:
+            return _err(e)
+
     def set_backend(self, name):
         try:
             if self._be is not None:

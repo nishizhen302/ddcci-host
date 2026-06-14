@@ -109,3 +109,23 @@ def test_api_override_pin_targets_selected_port():
         (0, vc.VCP_ADDR_LATCH, 0x7CA2),
         (0, vc.VCP_OVERRIDE, (vc.OVERRIDE_OP_PIN << 8) | 0),
     ]
+
+
+def test_api_output_enable_off_clears_rgb_bits_on_port():
+    # D3: P72_A6, 当前 0xF5 → 关输出 = 清 bit[6:5:4](0x70) → 0x85
+    be = FakeBackend(get_returns={(0, vc.VCP_ADDR_LATCH): (0xF5, 0xFF)})
+    api = _api_with_fake(be)
+    r = api.phytune_output_enable(0, False, 3)
+    assert r["ok"] is True
+    assert be.sets[0] == (0, vc.VCP_ADDR_LATCH, 0x72A6)
+    assert be.sets[-1] == (0, vc.VCP_POKE, 0x0085)
+
+
+def test_api_output_enable_on_sets_rgb_bits():
+    # D2: P71_A6, 当前 0x85 → 开输出 = 置 0x70 → 0xF5
+    be = FakeBackend(get_returns={(0, vc.VCP_ADDR_LATCH): (0x85, 0xFF)})
+    api = _api_with_fake(be)
+    r = api.phytune_output_enable(0, True, 2)
+    assert r["ok"] is True
+    assert be.sets[0] == (0, vc.VCP_ADDR_LATCH, 0x71A6)
+    assert be.sets[-1] == (0, vc.VCP_POKE, 0x00F5)

@@ -160,6 +160,23 @@ function paintPin(rec) {
 
 const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
 
+// [自检 B] 强制黑屏: 关 RGB 输出 → 黑 ~0.8s → 恢复。肉眼证明写实时到画面/硅片。
+function blankTest() { return lock(_blankTestInner); }
+async function _blankTestInner() {
+  const b = el('btn-blank');
+  if (b) b.disabled = true;
+  try {
+    log('黑屏自检: 画面应黑约 0.8 秒…');
+    const off = await api().phytune_output_enable(MON, false, PORT);
+    if (!off || !off.ok) { log('关输出失败: ' + ((off && off.error) || '')); return; }
+    await new Promise(r => setTimeout(r, 800));
+    const on = await api().phytune_output_enable(MON, true, PORT);
+    if (on && on.ok) log('画面已恢复 ✅ — 黑了一下 = 写实时到了硅片/画面, 通道确认无误。');
+    else log('⚠ 恢复输出失败! 手动恢复: 拔插信号线或断电重启。错误: ' + ((on && on.error) || ''));
+  } catch (e) { log('黑屏自检异常: ' + e + ' (如画面仍黑, 拔插信号线恢复)'); }
+  finally { if (b) b.disabled = false; }
+}
+
 function refreshAll() { return lock(_refreshAllInner); }
 async function _refreshAllInner() {
   spin(true);

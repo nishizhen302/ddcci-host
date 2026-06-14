@@ -70,6 +70,13 @@ def test_eff_page_offsets_by_port():
     assert m.by_name("dfe_le_l0").eff_page(3) == 0x7C
 
 
+def test_adapt_off_param_loaded():
+    p = P.load_params().by_name("dfe_adapt_off")
+    assert (p.page, p.offset, p.mask, p.shift) == (0x7B, 0x2B, 0x10, 4)
+    assert p.slot == 3 and p.live is False
+    assert p.eff_page(3) == 0x7C   # D3
+
+
 def test_eff_page_rejects_bad_port():
     p = P.load_params().by_name("freq_offset")
     with pytest.raises(ValueError):
