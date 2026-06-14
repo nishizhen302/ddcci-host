@@ -13,6 +13,7 @@ import sys
 import webview
 
 from ddcci_core import select_backend, pick_default_monitor, parse_caps
+from phytune.regaccess import RegAccess
 
 # 源码运行时 = 脚本目录; PyInstaller 打包后 = 解压临时目录(_MEIPASS), ui 资源在其下
 HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -299,6 +300,27 @@ class Api:
             if not ok:
                 return {"ok": False, "error": "写 VCP 0x%02X 失败" % int(code)}
             return {"ok": True}
+        except Exception as e:
+            return _err(e)
+
+    # ---- PHY 调试: 具名寄存器 peek/poke ----
+    def phytune_peek(self, page, offset, mon_id):
+        try:
+            be = self._ensure()
+            v = RegAccess(be, int(mon_id)).peek(int(page), int(offset))
+            if v is None:
+                return {"ok": False, "error": "peek 0x%02X:0x%02X 失败" % (int(page), int(offset)),
+                        "hint": "确认已烧带 _DEBUG_PHY_TUNE_SUPPORT 的调试固件。"}
+            return {"ok": True, "value": v}
+        except Exception as e:
+            return _err(e)
+
+    def phytune_poke(self, page, offset, data, type_, mon_id):
+        try:
+            be = self._ensure()
+            ok = RegAccess(be, int(mon_id)).poke(int(page), int(offset), int(data), int(type_))
+            return {"ok": True} if ok else {"ok": False,
+                    "error": "poke 0x%02X:0x%02X<-0x%02X 失败" % (int(page), int(offset), int(data))}
         except Exception as e:
             return _err(e)
 
