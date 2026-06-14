@@ -117,7 +117,16 @@ async function _writeOnce(name, v) {
   const rec = PARAMS[name];
   try {
     const r = await api().phytune_param_write(name, v, MON, PORT);
-    if (r && r.ok) { rec.last = v; await _readInto(name); return true; }
+    if (r && r.ok) {
+      rec.last = v; await _readInto(name);
+      // 已固化的参数改了值 → 同步刷新 override 槽, 否则重锁后会盖回旧的固化值(就是那个"又变 24"的 bug)。
+      if (rec.pinned && rec.def.slot !== null && rec.def.slot !== undefined) {
+        const pr = await api().phytune_override_pin(name, MON, PORT);
+        if (pr && pr.ok) log(`${name} 固化值已更新为 ${v}`);
+        else log(`${name} 更新固化值失败: ${(pr && pr.error) || ''}`);
+      }
+      return true;
+    }
     log(`写 ${name}=${v} 失败: ${(r && r.error) || ''}`);
     rec.slider.value = rec.last; rec.num.value = rec.last; return false;
   } catch (e) { log(`写 ${name} 异常: ${e}`); return false; }
