@@ -1,22 +1,22 @@
 @echo off
-chcp 65001 >nul
+rem (Keep this file ASCII-only: cmd parses .bat in the system codepage, UTF-8 Chinese breaks it.)
 cd /d "%~dp0"
 set DDCCI_PHYTUNE=1
 
-rem 界面用项目自带的 Python 3.8 venv(装了 pywebview + PyQt5,走 Qt 后端);
-rem 系统 py -3 没装 pywebview,别用。app_win7.py 强制 Qt 后端并处理高 DPI。
+rem UI needs the bundled Python 3.8 venv (has pywebview + PyQt5, Qt backend).
+rem System "py -3" has no pywebview. app_win7.py forces the Qt backend + handles high DPI.
 set PYEXE=.venv38\Scripts\python.exe
 
 if not exist "%PYEXE%" (
-  echo [错误] 找不到 %PYEXE%
-  echo 该 venv 是界面运行所需环境。把本文件放在 C:\code\ddcci-host 下运行。
+  echo [ERROR] cannot find %PYEXE%
+  echo Run this file from inside C:\code\ddcci-host
   pause
   exit /b 1
 )
 
-echo 正在启动 RL6410 PHY 调试界面...
+echo Starting RL6410 PHY tuning UI ...
 "%PYEXE%" app_win7.py
 
 echo.
-echo (界面进程已结束。若上方有报错,把它发给我。)
+echo (UI process ended. If there is an error above, send it to me.)
 pause
