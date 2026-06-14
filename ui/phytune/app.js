@@ -104,4 +104,11 @@ async function boot() {
   await refreshAll();
   log('就绪。绿=在线即时生效; 黄=需 P1 override 固化(重锁会被覆盖)。');
 }
-window.addEventListener('load', boot);
+
+// 必须等 pywebview 把 api 注入完(pywebviewready)再调, 否则 window.pywebview 还是 undefined。
+// 若事件已在挂监听前触发过, 用 api 是否就绪做兜底直接启动。
+if (window.pywebview && window.pywebview.api) {
+  boot();
+} else {
+  window.addEventListener('pywebviewready', boot);
+}
