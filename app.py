@@ -14,6 +14,7 @@ import webview
 
 from ddcci_core import select_backend, pick_default_monitor, parse_caps
 from phytune.regaccess import RegAccess
+from phytune.params import load_params
 
 # 源码运行时 = 脚本目录; PyInstaller 打包后 = 解压临时目录(_MEIPASS), ui 资源在其下
 HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -321,6 +322,40 @@ class Api:
             ok = RegAccess(be, int(mon_id)).poke(int(page), int(offset), int(data), int(type_))
             return {"ok": True} if ok else {"ok": False,
                     "error": "poke 0x%02X:0x%02X<-0x%02X 失败" % (int(page), int(offset), int(data))}
+        except Exception as e:
+            return _err(e)
+
+    # ---- PHY 调试: 命名参数模型(分组滑杆用) ----
+    def _model(self):
+        if getattr(self, "_param_model", None) is None:
+            self._param_model = load_params()
+        return self._param_model
+
+    def phytune_params(self):
+        """返回参数表(分组 + 参数描述)给前端建控件。"""
+        try:
+            m = self._model()
+            return {"ok": True, "groups": m.groups,
+                    "params": [p.to_dict() for p in m.params]}
+        except Exception as e:
+            return _err(e)
+
+    def phytune_param_read(self, name, mon_id):
+        try:
+            ra = RegAccess(self._ensure(), int(mon_id))
+            v = self._model().by_name(name).read(ra)
+            if v is None:
+                return {"ok": False, "error": "读 %s 失败" % name,
+                        "hint": "确认已烧调试固件且 DDC/CI 为标准 0x6E 模式。"}
+            return {"ok": True, "value": v}
+        except Exception as e:
+            return _err(e)
+
+    def phytune_param_write(self, name, value, mon_id):
+        try:
+            ra = RegAccess(self._ensure(), int(mon_id))
+            ok = self._model().by_name(name).write(ra, int(value))
+            return {"ok": True} if ok else {"ok": False, "error": "写 %s 失败" % name}
         except Exception as e:
             return _err(e)
 
