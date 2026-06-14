@@ -8,6 +8,34 @@ const log = m => { el('log').textContent =
 
 const PARAMS = {};          // name -> {def, slider, num, cur, last}
 
+// ---- DDC 操作串行锁 ----
+// peek=锁存地址(0xE5)+读回(0xE5) 两步; 多个读/写重叠会交错 → 读到别人锁的地址 = 数值乱跳。
+// 所有用户触发的操作(读全部/写/钉住/切端口)都排队串行执行, 杜绝交错。
+let _busy = false;
+const _queue = [];
+function lock(fn) {
+  return new Promise((res, rej) => { _queue.push({ fn, res, rej }); pump(); });
+}
+async function pump() {
+  if (_busy) return;
+  const job = _queue.shift();
+  if (!job) return;
+  _busy = true;
+  try { job.res(await job.fn()); }
+  catch (e) { job.rej(e); }
+  finally { _busy = false; pump(); }
+}
+
+// ↻读取全部 按钮转圈 + 禁用 + 文字提示(读取期间)
+function spin(on) {
+  const b = el('btn-refresh');
+  if (!b) return;
+  b.classList.toggle('spin', !!on);
+  b.disabled = !!on;
+  const tx = b.querySelector('.rtx');
+  if (tx) tx.textContent = on ? '读取中…' : '读取全部';
+}
+
 async function pickBoard() {
   try {
     const r = await api().list_monitors();
@@ -71,19 +99,46 @@ function rowFor(p) {
   return row;
 }
 
-async function togglePin(name) {
+// ---- 锁内核(unlocked, 只在已持锁的上下文里调, 避免嵌套死锁) ----
+async function _readInto(name) {
+  const rec = PARAMS[name];
+  try {
+    const r = await api().phytune_param_read(name, MON, PORT);
+    if (r && r.ok) {
+      rec.cur.textContent = '当前 ' + r.value; rec.last = r.value;
+      rec.slider.value = r.value; rec.num.value = r.value;
+      return r.value;
+    }
+    rec.cur.textContent = '读失败'; return null;
+  } catch (e) { rec.cur.textContent = '读异常'; return null; }
+}
+
+async function _writeOnce(name, v) {
+  const rec = PARAMS[name];
+  try {
+    const r = await api().phytune_param_write(name, v, MON, PORT);
+    if (r && r.ok) { rec.last = v; await _readInto(name); return true; }
+    log(`写 ${name}=${v} 失败: ${(r && r.error) || ''}`);
+    rec.slider.value = rec.last; rec.num.value = rec.last; return false;
+  } catch (e) { log(`写 ${name} 异常: ${e}`); return false; }
+}
+
+// ---- 公开入口(全部走串行锁)----
+function writeParam(name, v) { return lock(() => _writeOnce(name, v)); }
+
+function togglePin(name) { return lock(() => _togglePinInner(name)); }
+async function _togglePinInner(name) {
   const rec = PARAMS[name];
   try {
     if (!rec.pinned) {
-      // 先确保当前滑杆值已写进寄存器(固件 PIN 抓的是寄存器现值), 再钉住。
-      await writeParam(name, +rec.slider.value);
+      await _writeOnce(name, +rec.slider.value);   // PIN 抓寄存器现值, 先把当前值写进去
       const r = await api().phytune_override_pin(name, MON, PORT);
       if (r && r.ok) { rec.pinned = true; paintPin(rec); log(`已固化 ${name} → 槽${r.slot}`); }
-      else { log(`固化 ${name} 失败: ${(r && r.error) || ''}`); }
+      else log(`固化 ${name} 失败: ${(r && r.error) || ''}`);
     } else {
       const r = await api().phytune_override_clear(name, MON);
       if (r && r.ok) { rec.pinned = false; paintPin(rec); log(`已取消固化 ${name}`); }
-      else { log(`取消固化 ${name} 失败: ${(r && r.error) || ''}`); }
+      else log(`取消固化 ${name} 失败: ${(r && r.error) || ''}`);
     }
   } catch (e) { log(`固化 ${name} 异常: ${e}`); }
 }
@@ -96,34 +151,21 @@ function paintPin(rec) {
 
 const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
 
-async function writeParam(name, v) {
-  const rec = PARAMS[name];
+function refreshAll() { return lock(_refreshAllInner); }
+async function _refreshAllInner() {
+  spin(true);
   try {
-    const r = await api().phytune_param_write(name, v, MON, PORT);
-    if (r && r.ok) { rec.last = v; readParam(name); }
-    else { log(`写 ${name}=${v} 失败: ${(r && r.error) || ''}`);
-           rec.slider.value = rec.last; rec.num.value = rec.last; }
-  } catch (e) { log(`写 ${name} 异常: ${e}`); }
-}
-
-async function readParam(name) {
-  const rec = PARAMS[name];
-  try {
-    const r = await api().phytune_param_read(name, MON, PORT);
-    if (r && r.ok) { rec.cur.textContent = '当前 ' + r.value; rec.last = r.value; }
-    else { rec.cur.textContent = '读失败'; }
-  } catch (e) { rec.cur.textContent = '读异常'; }
-}
-
-async function refreshAll() {
-  for (const name of Object.keys(PARAMS)) {
-    const rec = PARAMS[name];
-    await readParam(name);
-    if (rec.cur.textContent.startsWith('当前 ')) {
-      const v = parseInt(rec.cur.textContent.slice(3), 10);
-      if (!isNaN(v)) { rec.slider.value = v; rec.num.value = v; }
+    // 拔插过信号后旧物理显示器句柄已失效(永久读失败), 必须先重新枚举认板才能恢复。
+    await pickBoard();
+    let okCount = 0, fail = 0;
+    for (const name of Object.keys(PARAMS)) {
+      const v = await _readInto(name);
+      if (v === null) fail++; else okCount++;
     }
-  }
+    if (okCount === 0 && fail > 0) {
+      log('全部读失败 → 已自动重认板。若仍失败: ①等画面完全稳定(重锁后 DDC 要缓几秒) ②确认线接在所选 HDMI 口。');
+    }
+  } finally { spin(false); }
 }
 
 // frameless 窗口: 关闭/最小化/边角缩放/拖动全靠前端接到 Api(同主 UI 机制)。

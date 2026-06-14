@@ -47,6 +47,11 @@
    border-radius:7px;padding:6px 12px;cursor:pointer;font-size:12px}
  .portsel{background:#101014;color:var(--txt);border:1px solid var(--line);border-radius:6px;
    padding:4px 6px;font-size:12px;cursor:pointer}
+ #btn-refresh{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+ #btn-refresh .ric{display:inline-block;font-size:14px;line-height:1}
+ #btn-refresh.spin{opacity:.75;cursor:default}
+ #btn-refresh.spin .ric{animation:spin .7s linear infinite}
+ @keyframes spin{to{transform:rotate(360deg)}}
 
  /* 怎么调 — 症状速查 */
  .guide{background:#14131c;border:1px solid #2c2a3a;border-radius:11px;margin:8px 0 4px}
@@ -112,7 +117,7 @@
          <option value="5">D5</option>
        </select>
      </label>
-     <button class="ghost" onclick="refreshAll()">↻ 读取全部</button>
+     <button class="ghost" id="btn-refresh" onclick="refreshAll()"><span class="ric">↻</span> <span class="rtx">读取全部</span></button>
    </div>
 
    <details class="guide">
