@@ -52,14 +52,14 @@
 
 ## 3. 在线通道：调试 VCP 协议
 
-新增厂商私有调试 VCP 操作码（选未用区 `0xE0~0xE2`，`0xE3` 预留；避开现有 `0x72` gamma / `0xF0` 按键 / `0xF1` Dell DDM）。固件侧在 `RTD2014Ddcci.c` 解析。
+新增厂商私有调试 VCP 操作码（取空闲区 `0xE5~0xE7`；`0xE0~E4` 已被固件 `_DDCCI_DISP_CALIB_*` 校准步骤值占用，`0xE3` 为 CONTROL_LOCK；同时避开 `0x72` gamma / `0xF0` 按键 / `0xF1` Dell DDM / `0xF3` cmds / `0xFD` MANUFACTURER）。固件侧在 `RTD2014Ddcci.c` 解析。
 
 | VCP | 方向 | 载荷(16bit value) | 含义 |
 |---|---|---|---|
-| `0xE0` | SET | `page<<8 \| offset` | 锁存目标寄存器地址 |
-| `0xE0` | GET | 返回 current=值 | **peek**：读锁存地址当前值 |
-| `0xE1` | SET | `type<<8 \| data8` | **poke**：写 data 到锁存地址；type=0 直接页寄存器，type=1 data-port 间接 |
-| `0xE2` | SET | `op<<8 \| slot` | **override 表**：op=1 登记(用上次 E0 地址+E1 值)，op=0 删除 slot，op=2 清空全部 |
+| `0xE5` | SET | `page<<8 \| offset` | 锁存目标寄存器地址 |
+| `0xE5` | GET | 返回 current=值 | **peek**：读锁存地址当前值 |
+| `0xE6` | SET | `type<<8 \| data8` | **poke**：写 data 到锁存地址；type=0 直接页寄存器，type=1 data-port 间接 |
+| `0xE7` | SET | `op<<8 \| slot` | **override 表**：op=1 登记(用上次 0xE5 地址+0xE6 值)，op=0 删除 slot，op=2 清空全部 |
 
 > 地址编码：page 用 RL6410 的页号（如 0x71、0x7B），offset 为寄存器低 8 位。首批参数全部是**直接页寄存器**（`ScalerSetBit/ScalerSetByte` 访问），type=0 即可；type=1 预留给将来 data-port 间接寄存器（HDMI packet 类）。
 
@@ -165,7 +165,7 @@ tests/
 
 固件侧（`monitor firmware`，需烧调试固件）：
 ```
-RTD2014Ddcci.c            # 加 0xE0~0xE3 调试 VCP 解析
+RTD2014Ddcci.c            # 加 0xE5~0xE7 调试 VCP 解析
 RL6410_Series_TMDSRx2~5.c # SetDFEInitial/SetPhy/InterruptInitial 末尾加 apply hook
 RL6410_DebugTune.h        # 新生成头(参数化 preset)
 UserCommonDdcciDefine.h   # 加 _DDCCI_OPCODE 宏 + _DEBUG_PHY_TUNE_SUPPORT 开关
@@ -193,7 +193,7 @@ UserCommonDdcciDefine.h   # 加 _DDCCI_OPCODE 宏 + _DEBUG_PHY_TUNE_SUPPORT 开�
 
 ## 10. 分期
 
-- **P0 传输扩展**：固件加 0xE0~0xE3 + peek/poke（无 override）；上位机 `regaccess` + 最小 UI，能读写单个寄存器。烧一版调试固件验证链路。
+- **P0 传输扩展**：固件加 0xE5~0xE7 + peek/poke（无 override）；上位机 `regaccess` + 最小 UI，能读写单个寄存器。烧一版调试固件验证链路。
 - **P1 override 表**：固件加表 + apply hook；上位机登记/清除。验证调值扛过重锁。
 - **P2 参数模型 + 分组 UI**：yaml + 命名滑杆 + 实时 CED 状态条。
 - **P3 离线编译**：参数化头重构 + builder + diff + 编译产 bin。
