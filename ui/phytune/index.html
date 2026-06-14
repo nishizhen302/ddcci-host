@@ -45,6 +45,8 @@
  .sub{color:var(--sub);font-size:12px}
  button.ghost{background:#23232a;color:var(--txt);border:1px solid var(--line);
    border-radius:7px;padding:6px 12px;cursor:pointer;font-size:12px}
+ .portsel{background:#101014;color:var(--txt);border:1px solid var(--line);border-radius:6px;
+   padding:4px 6px;font-size:12px;cursor:pointer}
 
  /* 怎么调 — 症状速查 */
  .guide{background:#14131c;border:1px solid #2c2a3a;border-radius:11px;margin:8px 0 4px}
@@ -102,6 +104,14 @@
  <div class="scroll">
    <div class="bar">
      <div class="sub" id="board" style="flex:1">枚举显示器…</div>
+     <label class="sub" style="display:flex;align-items:center;gap:5px">HDMI口
+       <select id="port" class="portsel">
+         <option value="2">D2</option>
+         <option value="3">D3</option>
+         <option value="4">D4</option>
+         <option value="5">D5</option>
+       </select>
+     </label>
      <button class="ghost" onclick="refreshAll()">↻ 读取全部</button>
    </div>
 

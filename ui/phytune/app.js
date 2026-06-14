@@ -1,5 +1,6 @@
 // RL6410 PHY 调试 —— 分组命名滑杆。启动自动认板 → 拉参数表建控件 → 读当前值。
 let MON = 0;
+let PORT = 2;   // HDMI 物理端口 D2~D5; 决定寄存器页(D3=P72/P7C...)。默认 D2。
 const api = () => window.pywebview.api;
 const el = id => document.getElementById(id);
 const log = m => { el('log').textContent =
@@ -76,7 +77,7 @@ async function togglePin(name) {
     if (!rec.pinned) {
       // 先确保当前滑杆值已写进寄存器(固件 PIN 抓的是寄存器现值), 再钉住。
       await writeParam(name, +rec.slider.value);
-      const r = await api().phytune_override_pin(name, MON);
+      const r = await api().phytune_override_pin(name, MON, PORT);
       if (r && r.ok) { rec.pinned = true; paintPin(rec); log(`已固化 ${name} → 槽${r.slot}`); }
       else { log(`固化 ${name} 失败: ${(r && r.error) || ''}`); }
     } else {
@@ -98,7 +99,7 @@ const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
 async function writeParam(name, v) {
   const rec = PARAMS[name];
   try {
-    const r = await api().phytune_param_write(name, v, MON);
+    const r = await api().phytune_param_write(name, v, MON, PORT);
     if (r && r.ok) { rec.last = v; readParam(name); }
     else { log(`写 ${name}=${v} 失败: ${(r && r.error) || ''}`);
            rec.slider.value = rec.last; rec.num.value = rec.last; }
@@ -108,7 +109,7 @@ async function writeParam(name, v) {
 async function readParam(name) {
   const rec = PARAMS[name];
   try {
-    const r = await api().phytune_param_read(name, MON);
+    const r = await api().phytune_param_read(name, MON, PORT);
     if (r && r.ok) { rec.cur.textContent = '当前 ' + r.value; rec.last = r.value; }
     else { rec.cur.textContent = '读失败'; }
   } catch (e) { rec.cur.textContent = '读异常'; }
@@ -152,12 +153,25 @@ function wireWindowChrome() {
   }
 }
 
+// 端口选择: 切换 HDMI 物理口(D2~D5) → 寄存器页随之偏移, 重读全部。
+function wirePortSel() {
+  const ps = el('port');
+  if (!ps) return;
+  ps.value = String(PORT);
+  ps.addEventListener('change', () => {
+    PORT = +ps.value;
+    log('切到 D' + PORT + ' 口 (寄存器页随端口偏移); 重读中…');
+    refreshAll();
+  });
+}
+
 async function boot() {
   wireWindowChrome();
+  wirePortSel();
   await pickBoard();
   await buildUI();
   await refreshAll();
-  log('就绪。绿=在线即时生效; 黄=需 P1 override 固化(重锁会被覆盖)。');
+  log('就绪。先选对你插的 HDMI 口(D2~D5)！绿=在线即时生效; 黄=需📌固化(重锁会被覆盖)。');
 }
 
 // 必须等 pywebview 把 api 注入完(pywebviewready)再调, 否则 window.pywebview 还是 undefined。

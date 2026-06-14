@@ -89,3 +89,23 @@ def test_api_override_clearall():
     r = api.phytune_override_clearall(0)
     assert r["ok"] is True
     assert be.sets == [(0, vc.VCP_OVERRIDE, (vc.OVERRIDE_OP_CLEARALL << 8) | 0)]
+
+
+def test_api_param_write_targets_selected_port():
+    # D3: dfe_le_l0 写应打到 P7C(0x7C) 而非默认 D2 的 0x7B
+    be = FakeBackend(get_returns={(0, vc.VCP_ADDR_LATCH): (0x8C, 0xFF)})
+    api = _api_with_fake(be)
+    r = api.phytune_param_write("dfe_le_l0", 20, 0, 3)
+    assert r["ok"] is True
+    assert be.sets[0] == (0, vc.VCP_ADDR_LATCH, 0x7CA2)
+
+
+def test_api_override_pin_targets_selected_port():
+    be = FakeBackend()
+    api = _api_with_fake(be)
+    r = api.phytune_override_pin("dfe_le_l0", 0, 3)   # D3 → P7C_A2 = 0x7CA2
+    assert r == {"ok": True, "slot": 0}
+    assert be.sets == [
+        (0, vc.VCP_ADDR_LATCH, 0x7CA2),
+        (0, vc.VCP_OVERRIDE, (vc.OVERRIDE_OP_PIN << 8) | 0),
+    ]

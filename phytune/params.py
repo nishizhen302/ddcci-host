@@ -34,23 +34,32 @@ class Param(object):
         if self.slot is not None:
             self.slot = int(self.slot)
 
-    def read(self, ra):
-        """读回当前位域值; peek 失败返回 None。"""
-        cur = ra.peek(self.page, self.offset)
+    def eff_page(self, port=2):
+        """按 HDMI 物理端口换算实际页号。各端口 PHY 页线性排布: D2/D3/D4/D5 每步 +1
+        (频检 0x71→72→73→74; DFE/CDR 0x7B→7C→7D→7E)。基址=参数表里的 D2 页。"""
+        port = int(port)
+        if not (2 <= port <= 5):
+            raise ValueError("port 只能 2~5(D2~D5): %r" % (port,))
+        return self.page + (port - 2)
+
+    def read(self, ra, port=2):
+        """读回当前位域值(按端口选页); peek 失败返回 None。"""
+        cur = ra.peek(self.eff_page(port), self.offset)
         if cur is None:
             return None
         return (cur & self.mask) >> self.shift
 
-    def write(self, ra, value):
-        """范围校验 + 读改写。越界抛 ValueError; peek 失败返回 False; 否则返回 poke 结果。"""
+    def write(self, ra, value, port=2):
+        """范围校验 + 读改写(按端口选页)。越界抛 ValueError; peek 失败返回 False; 否则返回 poke 结果。"""
         value = int(value)
         if not (self.min <= value <= self.max):
             raise ValueError("%s=%d 越界 [%d, %d]" % (self.name, value, self.min, self.max))
-        cur = ra.peek(self.page, self.offset)
+        page = self.eff_page(port)
+        cur = ra.peek(page, self.offset)
         if cur is None:
             return False
         newbyte = (cur & ~self.mask) | ((value << self.shift) & self.mask)
-        return ra.poke(self.page, self.offset, newbyte)
+        return ra.poke(page, self.offset, newbyte)
 
     def to_dict(self):
         """给前端用的可序列化描述。"""

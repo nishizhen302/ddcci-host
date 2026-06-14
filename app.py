@@ -340,10 +340,10 @@ class Api:
         except Exception as e:
             return _err(e)
 
-    def phytune_param_read(self, name, mon_id):
+    def phytune_param_read(self, name, mon_id, port=2):
         try:
             ra = RegAccess(self._ensure(), int(mon_id))
-            v = self._model().by_name(name).read(ra)
+            v = self._model().by_name(name).read(ra, int(port))
             if v is None:
                 return {"ok": False, "error": "读 %s 失败" % name,
                         "hint": "确认已烧调试固件且 DDC/CI 为标准 0x6E 模式。"}
@@ -351,23 +351,23 @@ class Api:
         except Exception as e:
             return _err(e)
 
-    def phytune_param_write(self, name, value, mon_id):
+    def phytune_param_write(self, name, value, mon_id, port=2):
         try:
             ra = RegAccess(self._ensure(), int(mon_id))
-            ok = self._model().by_name(name).write(ra, int(value))
+            ok = self._model().by_name(name).write(ra, int(value), int(port))
             return {"ok": True} if ok else {"ok": False, "error": "写 %s 失败" % name}
         except Exception as e:
             return _err(e)
 
     # ---- PHY 调试 P1: override 表(让重锁后被覆盖的 DFE 值固化)----
-    def phytune_override_pin(self, name, mon_id):
-        """把参数当前值钉进它的固定 override 槽; 固件重锁后自动盖回。"""
+    def phytune_override_pin(self, name, mon_id, port=2):
+        """把参数当前值钉进它的固定 override 槽(按端口选页); 固件重锁后自动盖回。"""
         try:
             p = self._model().by_name(name)
             if p.slot is None:
                 return {"ok": False, "error": "%s 是在线参数, 无需固化" % name}
             ra = RegAccess(self._ensure(), int(mon_id))
-            ok = ra.override_pin(p.page, p.offset, p.slot)
+            ok = ra.override_pin(p.eff_page(int(port)), p.offset, p.slot)
             return {"ok": True, "slot": p.slot} if ok else {"ok": False, "error": "钉住 %s 失败" % name}
         except Exception as e:
             return _err(e)
