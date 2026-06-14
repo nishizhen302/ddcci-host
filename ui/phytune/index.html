@@ -2,18 +2,44 @@
 <html lang="zh-CN"><head><meta charset="utf-8">
 <title>RL6410 PHY 调试</title>
 <style>
- body{font-family:Segoe UI,system-ui;background:#0a0a0b;color:#e8e8ea;padding:16px}
- .row{display:flex;gap:8px;align-items:center;margin:8px 0}
- input{background:#1a1a1d;border:1px solid #333;color:#e8e8ea;border-radius:6px;padding:6px 8px;width:90px}
- button{background:linear-gradient(135deg,#5b6af0,#8b5cf6);border:0;color:#fff;border-radius:6px;padding:6px 14px;cursor:pointer}
- #log{margin-top:12px;font-family:Consolas,monospace;font-size:12px;white-space:pre-wrap;color:#9aa}
+ :root{--bg:#0a0a0b;--card:#16161a;--line:#2a2a31;--txt:#e8e8ea;--sub:#8a8a93;
+   --accent:#5b6af0;--accent2:#8b5cf6;--green:#34d77b;--amber:#f5a623;}
+ *{box-sizing:border-box}
+ body{font-family:Segoe UI,system-ui;background:var(--bg);color:var(--txt);margin:0;padding:14px;font-size:13px}
+ h2{margin:0 0 2px;font-size:15px;font-weight:600}
+ .bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+ .sub{color:var(--sub);font-size:12px}
+ button{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;color:#fff;
+   border-radius:7px;padding:6px 12px;cursor:pointer;font-size:12px}
+ button.ghost{background:#23232a;color:var(--txt);border:1px solid var(--line)}
+ .group{background:var(--card);border:1px solid var(--line);border-radius:11px;margin:10px 0;overflow:hidden}
+ .ghead{padding:8px 12px;background:#202027;font-weight:600;border-bottom:1px solid var(--line)}
+ .row{display:grid;grid-template-columns:1fr 150px 70px;gap:10px;align-items:center;
+   padding:9px 12px;border-bottom:1px solid #202026}
+ .row:last-child{border-bottom:0}
+ .pname{display:flex;flex-direction:column;gap:2px;min-width:0}
+ .pname b{font-weight:600}
+ .badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
+ .b-live{background:rgba(52,215,123,.14);color:var(--green)}
+ .b-p1{background:rgba(245,166,35,.14);color:var(--amber)}
+ .note{color:var(--sub);font-size:11px}
+ input[type=range]{width:100%}
+ .num{background:#101014;border:1px solid var(--line);color:var(--txt);border-radius:6px;
+   padding:5px 6px;width:100%;text-align:center;font-family:Consolas,monospace}
+ .cur{color:var(--sub);font-size:12px;text-align:center;font-family:Consolas,monospace}
+ #log{margin-top:12px;font-family:Consolas,monospace;font-size:11px;white-space:pre-wrap;
+   color:#9aa;max-height:120px;overflow:auto;background:#0e0e11;border:1px solid var(--line);
+   border-radius:8px;padding:8px}
 </style></head>
 <body>
- <h3>RL6410 PHY 寄存器调试 (P0)</h3>
- <div class="row">page 0x<input id="page" value="71"> offset 0x<input id="off" value="EC">
-   <button onclick="doPeek()">读 peek</button> <span id="rd"></span></div>
- <div class="row">data 0x<input id="data" value="3F">
-   <button onclick="doPoke()">写 poke</button></div>
+ <div class="bar">
+   <div style="flex:1">
+     <h2>RL6410 PHY 调试</h2>
+     <div class="sub" id="board">枚举显示器…</div>
+   </div>
+   <button class="ghost" onclick="refreshAll()">↻ 读取全部</button>
+ </div>
+ <div id="groups"></div>
  <div id="log"></div>
  <script src="app.js"></script>
 </body></html>

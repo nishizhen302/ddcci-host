@@ -1,28 +1,107 @@
-let MON = 0;                         // 启动时自动认 RTK 板(list_monitors 的 default)
-const hx = id => parseInt(document.getElementById(id).value, 16);
-const log = m => { document.getElementById('log').textContent =
-  new Date().toLocaleTimeString() + '  ' + m + '\n' + document.getElementById('log').textContent; };
+// RL6410 PHY 调试 —— 分组命名滑杆。启动自动认板 → 拉参数表建控件 → 读当前值。
+let MON = 0;
+const api = () => window.pywebview.api;
+const el = id => document.getElementById(id);
+const log = m => { el('log').textContent =
+  new Date().toLocaleTimeString() + '  ' + m + '\n' + el('log').textContent; };
+
+const PARAMS = {};          // name -> {def, slider, num, cur, last}
+let writeTimer = null;      // 拖动节流
 
 async function pickBoard() {
   try {
-    const r = await window.pywebview.api.list_monitors();
+    const r = await api().list_monitors();
     if (r && r.ok) {
-      if (r.default !== null && r.default !== undefined) { MON = r.default; }
+      if (r.default !== null && r.default !== undefined) MON = r.default;
       const names = (r.monitors || []).map(m => `[${m.id}] ${m.model || m.description}`).join('  ');
-      log(`显示器: ${names || '(无)'}  → 用 [${MON}]`);
-    } else {
-      log('枚举显示器失败: ' + ((r && r.error) || '未知'));
-    }
-  } catch (e) { log('枚举异常: ' + e); }
+      el('board').textContent = `${names || '(无显示器)'}  → 调试目标 [${MON}]`;
+    } else { el('board').textContent = '枚举失败: ' + ((r && r.error) || '未知'); }
+  } catch (e) { el('board').textContent = '枚举异常: ' + e; }
 }
-window.addEventListener('load', pickBoard);
 
-async function doPeek() {
-  const r = await window.pywebview.api.phytune_peek(hx('page'), hx('off'), MON);
-  document.getElementById('rd').textContent = r.ok ? '= 0x' + r.value.toString(16).toUpperCase() : r.error;
-  log(r.ok ? `peek ${document.getElementById('page').value}:${document.getElementById('off').value} = 0x${r.value.toString(16)}` : 'peek 失败: ' + r.error);
+async function buildUI() {
+  const r = await api().phytune_params();
+  if (!r || !r.ok) { log('拉参数表失败: ' + ((r && r.error) || '未知')); return; }
+  const wrap = el('groups'); wrap.innerHTML = '';
+  for (const g of r.groups) {
+    const ps = r.params.filter(p => p.group === g.id);
+    if (!ps.length) continue;
+    const card = document.createElement('div'); card.className = 'group';
+    card.innerHTML = `<div class="ghead">${g.label}</div>`;
+    for (const p of ps) card.appendChild(rowFor(p));
+    wrap.appendChild(card);
+  }
 }
-async function doPoke() {
-  const r = await window.pywebview.api.phytune_poke(hx('page'), hx('off'), hx('data'), 0, MON);
-  log(r.ok ? `poke ok` : 'poke 失败: ' + r.error);
+
+function rowFor(p) {
+  const row = document.createElement('div'); row.className = 'row';
+  const badge = p.live ? '<span class="badge b-live">在线</span>'
+                       : '<span class="badge b-p1">需P1固化</span>';
+  const left = document.createElement('div'); left.className = 'pname';
+  left.innerHTML = `<b>${p.label}${badge}</b><span class="note">${p.note || ''}</span>`;
+  const slider = document.createElement('input');
+  slider.type = 'range'; slider.min = p.min; slider.max = p.max; slider.value = p.default;
+  const num = document.createElement('input');
+  num.className = 'num'; num.type = 'number'; num.min = p.min; num.max = p.max; num.value = p.default;
+  const cur = document.createElement('div'); cur.className = 'cur'; cur.textContent = '当前 …';
+
+  const rec = { def: p, slider, num, cur, last: p.default };
+  PARAMS[p.name] = rec;
+
+  // 拖动: 实时同步数字, 节流写入
+  slider.addEventListener('input', () => { num.value = slider.value; scheduleWrite(p.name, +slider.value); });
+  slider.addEventListener('change', () => writeParam(p.name, +slider.value));
+  num.addEventListener('change', () => {
+    let v = clamp(+num.value, p.min, p.max); num.value = v; slider.value = v; writeParam(p.name, v);
+  });
+
+  row.appendChild(left); row.appendChild(slider);
+  const right = document.createElement('div'); right.appendChild(num); right.appendChild(cur);
+  row.appendChild(right);
+  return row;
 }
+
+const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+
+function scheduleWrite(name, v) {
+  if (writeTimer) clearTimeout(writeTimer);
+  writeTimer = setTimeout(() => writeParam(name, v), 120);
+}
+
+async function writeParam(name, v) {
+  const rec = PARAMS[name];
+  try {
+    const r = await api().phytune_param_write(name, v, MON);
+    if (r && r.ok) { rec.last = v; readParam(name); }
+    else { log(`写 ${name}=${v} 失败: ${(r && r.error) || ''}`);
+           rec.slider.value = rec.last; rec.num.value = rec.last; }
+  } catch (e) { log(`写 ${name} 异常: ${e}`); }
+}
+
+async function readParam(name) {
+  const rec = PARAMS[name];
+  try {
+    const r = await api().phytune_param_read(name, MON);
+    if (r && r.ok) { rec.cur.textContent = '当前 ' + r.value; rec.last = r.value; }
+    else { rec.cur.textContent = '读失败'; }
+  } catch (e) { rec.cur.textContent = '读异常'; }
+}
+
+async function refreshAll() {
+  for (const name of Object.keys(PARAMS)) {
+    const rec = PARAMS[name];
+    await readParam(name);
+    if (rec.cur.textContent.startsWith('当前 ')) {
+      const v = parseInt(rec.cur.textContent.slice(3), 10);
+      if (!isNaN(v)) { rec.slider.value = v; rec.num.value = v; }
+    }
+  }
+}
+
+async function boot() {
+  await pickBoard();
+  await buildUI();
+  await refreshAll();
+  log('就绪。绿=在线即时生效; 黄=需 P1 override 固化(重锁会被覆盖)。');
+}
+window.addEventListener('load', boot);
