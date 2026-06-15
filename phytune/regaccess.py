@@ -28,6 +28,13 @@ class RegAccess:
         return self._be.set_vcp(self._mon, vc.VCP_POKE,
                                 vc.pack_poke(data, type_))
 
+    def read_scdc(self, page, scdc_offset):
+        """SCDC 间接读: 同页 0x39 写 SCDC 偏移选择, 再读 0x3A 数据窗。
+        纯 poke/peek 直寄存器即可, 无需改固件。任一步失败返回 None。"""
+        if not self.poke(page, 0x39, scdc_offset):
+            return None
+        return self.peek(page, 0x3A)
+
     def override_pin(self, page, offset, slot):
         """[P1] 钉住 page/offset 当前值到 override 槽 slot(重锁后固件自动盖回)。
         先锁存地址, 再发 PIN; 固件按锁存地址读现值存槽。失败返回 False。"""

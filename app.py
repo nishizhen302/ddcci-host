@@ -15,6 +15,7 @@ import webview
 from ddcci_core import select_backend, pick_default_monitor, parse_caps
 from phytune.regaccess import RegAccess
 from phytune.params import load_params
+from phytune import ced as ced_mod
 
 # 源码运行时 = 脚本目录; PyInstaller 打包后 = 解压临时目录(_MEIPASS), ui 资源在其下
 HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -390,6 +391,65 @@ class Api:
             ra = RegAccess(self._ensure(), int(mon_id))
             ok = ra.override_clearall()
             return {"ok": True} if ok else {"ok": False, "error": "清空 override 表失败"}
+        except Exception as e:
+            return _err(e)
+
+    def phytune_dfe_freeze(self, mon_id, on, port=2):
+        """[一键开眼] 冻结/解冻 DFE 自适应环 (P7B_A1/B1/C1 = DFE_EN_2, 三 lane)。
+        on=True 写 0x00 = 关全部自适应环 → 均衡器定在当前系数, 手动设的 LE/Tap1 才不被冲掉;
+        on=False 写 0xC3 = 恢复 LE+Vth+Tap0~1 自适应(>1000M 档默认, 近似值, 真值随像素钟,
+        彻底恢复靠重锁/拔插)。按端口偏移 D3=P7C。"""
+        try:
+            port = int(port)
+            if not (2 <= port <= 5):
+                return {"ok": False, "error": "port 只能 2~5"}
+            page = 0x7B + (port - 2)
+            val = 0x00 if on else 0xC3
+            ra = RegAccess(self._ensure(), int(mon_id))
+            for off in (0xA1, 0xB1, 0xC1):       # L0/L1/L2 DFE_EN_2
+                if not ra.poke(page, off, val):
+                    return {"ok": False, "error": "写 P%02X_%02X 失败" % (page, off)}
+            return {"ok": True}
+        except Exception as e:
+            return _err(e)
+
+    def phytune_dfe_reload(self, mon_id, port=2, lane=None):
+        """[一键开眼] 把 A5/B5/C5(LE+Tap1 初值)推进活均衡器: 翻转 P7B_AA/BA/CA[2:1]
+        (置 0x06 再清), 即固件自己用的 "Reload LE/Tap1" 动作(TMDSRx2.c:1538)。
+        lane=None 三 lane 全 reload; 0/1/2 只 reload 该 lane。按端口偏移。"""
+        try:
+            port = int(port)
+            if not (2 <= port <= 5):
+                return {"ok": False, "error": "port 只能 2~5"}
+            page = 0x7B + (port - 2)
+            regs = {0: 0xAA, 1: 0xBA, 2: 0xCA}
+            offs = list(regs.values()) if lane is None else [regs[int(lane)]]
+            ra = RegAccess(self._ensure(), int(mon_id))
+            for off in offs:
+                cur = ra.peek(page, off)
+                if cur is None:
+                    return {"ok": False, "error": "读 P%02X_%02X 失败" % (page, off)}
+                if not ra.poke(page, off, cur | 0x06):     # 置 reload 位
+                    return {"ok": False, "error": "置 reload 失败"}
+                if not ra.poke(page, off, cur & ~0x06):    # 清回 (脉冲)
+                    return {"ok": False, "error": "清 reload 失败"}
+            return {"ok": True}
+        except Exception as e:
+            return _err(e)
+
+    def phytune_ced_read(self, mon_id, port=2):
+        """[误码监视] 读当前端口三通道 (R/G/B) SCDC 字符误码计数 (CED)。
+        sink 硬件实时统计, 读后清零 → 定时轮询得到的是该间隔内的误码率, 作为
+        调 LE/Tap1/CDR 的客观方向判据。纯上位机读, 不需改固件。
+        返回 {ok, channels:[{name,label,count,valid}], valid}; valid=任一通道有效
+        (= 链路处在 HDMI2.0 加扰高速模式, 才有误码统计)。"""
+        try:
+            ra = RegAccess(self._ensure(), int(mon_id))
+            r = ced_mod.read_ced(ra, int(port))
+            if r is None:
+                return {"ok": False, "error": "读 CED 失败",
+                        "hint": "确认已烧调试固件且 DDC/CI 为标准 0x6E 模式。"}
+            return {"ok": True, "channels": r["channels"], "valid": r["valid"]}
         except Exception as e:
             return _err(e)
 

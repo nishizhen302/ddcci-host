@@ -85,6 +85,23 @@
    background:#23232a;color:var(--amber);border:1px solid #3a3320;white-space:nowrap}
  .pin:hover{background:#2c2a1c}
  .pin.on{background:rgba(52,215,123,.16);color:var(--green);border-color:#2c5a3a}
+ /* 实时误码 CED 监视条 */
+ .ced{background:#0f1418;border:1px solid #21303a;border-radius:11px;margin:10px 0;padding:9px 12px 11px}
+ .ced-h{font-weight:600;color:#bfe0ef;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+ .ced-st{font-weight:400;font-size:11px;color:var(--sub)}
+ .ced-st.ok{color:var(--green)}
+ .ced-st.idle{color:var(--amber)}
+ .ced-st.bad{color:#ff6b6b}
+ .ced-ch{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+ .cedc{background:#0a0f12;border:1px solid #1c2730;border-radius:8px;padding:7px 4px;text-align:center;
+   display:flex;flex-direction:column;align-items:center;gap:2px;transition:border-color .2s,background .2s}
+ .cedc .cl{font-size:10px;font-weight:700;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;color:#0a0a0b}
+ .cedc .cl.r{background:#ff5b5b}.cedc .cl.g{background:#34d77b}.cedc .cl.b{background:#5b8bf0}
+ .cedc b{font-family:Consolas,monospace;font-size:17px;line-height:1.1}
+ .cedc i{font-style:normal;font-size:10px;color:#5a6670}
+ .cedc.zero b{color:var(--green)}
+ .cedc.err{background:#1e1113;border-color:#5a2630}.cedc.err b{color:#ff6b6b}
+ .cedc.idle b{color:#566}
  #log{margin-top:12px;font-family:Consolas,monospace;font-size:11px;white-space:pre-wrap;
    color:#9aa;max-height:120px;overflow:auto;background:#0e0e11;border:1px solid var(--line);
    border-radius:8px;padding:8px}
@@ -124,6 +141,7 @@
        <input type="checkbox" id="autoref" checked> 自动刷新
      </label>
      <button class="ghost" id="btn-refresh" onclick="refreshAll()"><span class="ric">↻</span> <span class="rtx">读取全部</span></button>
+     <button class="ghost" id="btn-autoeye" onclick="autoEye()" title="自动开眼: 关自适应→逐 lane 扫 LE/Tap1(A5)+reload→读该通道 CED→停在误码最低值→📌固化。需高速加扰链路(有误码可测)。再点=停。">🔧 一键开眼</button>
      <button class="ghost" id="btn-blank" onclick="blankTest()" title="临时关 RGB 输出 ~0.8 秒, 画面黑一下再恢复——证明写实时到了画面">🖥️ 黑屏自检</button>
      <button class="ghost" id="btn-clearpins" onclick="clearAllPins()" title="一键解除所有📌固化(override表)。现场钉了坏值导致黑屏循环时用它救场(等效断电重启清表)">🧹 清空固化</button>
    </div>
@@ -140,6 +158,16 @@
        <span style="color:#888">单项小步动(±1~±2),每动一步等 1~2 秒看现象再继续。黄标项真正稳定生效需做 P1 固化。</span>
      </div>
    </details>
+
+   <!-- 实时误码监视 (HDMI2.0 SCDC CED): 三通道 R/G/B 字符误码增量, 调参方向的客观判据 -->
+   <div class="ced" id="ced" title="sink 硬件实时统计的每通道字符误码数(读后清零, 故每≈2秒为一段增量=误码率)。调 LE/Tap1/CDR 时盯哪条通道往下掉=方向对。仅高速加扰 HDMI2.0 链路有数。">
+     <div class="ced-h">📊 实时误码 CED <span class="ced-st" id="ced-st">…</span></div>
+     <div class="ced-ch">
+       <div class="cedc" id="ced-ch0"><span class="cl r">R</span><b>—</b><i>Ch0</i></div>
+       <div class="cedc" id="ced-ch1"><span class="cl g">G</span><b>—</b><i>Ch1</i></div>
+       <div class="cedc" id="ced-ch2"><span class="cl b">B</span><b>—</b><i>Ch2</i></div>
+     </div>
+   </div>
 
    <div id="groups"></div>
    <div id="log"></div>

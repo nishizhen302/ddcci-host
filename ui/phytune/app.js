@@ -196,6 +196,115 @@ async function _clearAllPinsInner() {
   } else log('清空固化失败: ' + ((r && r.error) || ''));
 }
 
+// ---- 🔧 一键开眼: CED 闭环自动扫 LE/Tap1, 停在每 lane 误码最低值 ----
+// 机制(固件 TMDSRx2.c:1493-1568 验证): 关自适应环(A1/B1/C1=0)→写 A5/B5/C5(活的 LE+Tap1)
+// →翻转 AA/BA/CA[2:1] reload 推进硅片→读该 lane 的 CED 通道。纯 peek/poke, 不改固件。
+let _autoEyeRunning = false;
+let _autoEyeCancel = false;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function autoEye() {
+  if (_autoEyeRunning) { _autoEyeCancel = true; log('一键开眼: 收到停止…'); return; }
+  return lock(_autoEyeInner);
+}
+function _setEyeBtn(running) {
+  const b = el('btn-autoeye'); if (!b) return;
+  b.textContent = running ? '⏹ 停止开眼' : '🔧 一键开眼';
+}
+
+// 测一个 lane 的误码: 读一次清零 → 等窗口累计 → 再读 = 该窗口误码增量。无效链路返回 null。
+async function _measureLaneErr(lane, dwell) {
+  let r = await api().phytune_ced_read(MON, PORT);
+  if (!r || !r.ok || !r.valid) return null;
+  await sleep(dwell);
+  r = await api().phytune_ced_read(MON, PORT);
+  if (!r || !r.ok || !r.channels[lane]) return null;
+  return r.channels[lane].count;
+}
+// 试一个候选值: 写 A5 → reload 推活 → 稳定 → 测该 lane 误码。
+async function _tryVal(name, lane, v, dwell) {
+  await api().phytune_param_write(name, v, MON, PORT);
+  await api().phytune_dfe_reload(MON, PORT, lane);
+  await sleep(150);
+  return await _measureLaneErr(lane, dwell);
+}
+
+async function _sweepLane(lane, dwell) {
+  const name = 'dfe_tap1_l' + lane;          // A5/B5/C5 = 活的 LE+Tap1 寄存器
+  const rec = PARAMS[name]; if (!rec) return null;
+  const p = rec.def;
+  const lo = p.min, hi = Math.min(p.max, 40); // 上限 40 够用(LE+Tap1 和), 控制扫描时长
+  let best = { v: clamp(+rec.slider.value, lo, hi), e: Infinity };
+  const tried = new Set();
+  // 粗扫 step 4
+  for (let v = lo; v <= hi; v += 4) {
+    if (_autoEyeCancel) return best;
+    const e = await _tryVal(name, lane, v, dwell);
+    if (e === null) { log(`lane${lane}: 链路无误码统计(非高速/未加扰), 跳过`); return null; }
+    tried.add(v);
+    if (e < best.e) best = { v, e };
+    log(`lane${lane} LE/Tap1=${v} → 误码 ${e}${e === best.e ? '  ← 最优' : ''}`);
+    if (best.e === 0) break;                  // 已无误码, 无需再扫
+  }
+  // 细扫 best 附近 ±3 step 1
+  if (best.e > 0) {
+    for (let v = Math.max(lo, best.v - 3); v <= Math.min(hi, best.v + 3); v++) {
+      if (_autoEyeCancel) break;
+      if (tried.has(v)) continue;
+      const e = await _tryVal(name, lane, v, dwell);
+      if (e === null) break;
+      if (e < best.e) { best = { v, e }; log(`lane${lane} 细调 ${v} → 误码 ${e}  ← 更优`); }
+      if (best.e === 0) break;
+    }
+  }
+  // 落定最优值 + reload + 固化
+  await api().phytune_param_write(name, best.v, MON, PORT);
+  await api().phytune_dfe_reload(MON, PORT, lane);
+  const pr = await api().phytune_override_pin(name, MON, PORT);
+  if (pr && pr.ok) { rec.pinned = true; paintPin(rec); }
+  await _readInto(name);
+  return best;
+}
+
+async function _autoEyeInner() {
+  _autoEyeRunning = true; _autoEyeCancel = false; _setEyeBtn(true);
+  const b = el('btn-autoeye'); if (b) b.disabled = false;
+  try {
+    log('🔧 一键开眼开始 (D' + PORT + ')。先查链路是否有可测误码…');
+    const pre = await api().phytune_ced_read(MON, PORT);
+    if (!pre || !pre.ok) { log('读 CED 失败, 终止。确认已选对 HDMI 口、画面已稳。'); return; }
+    if (!pre.valid) {
+      log('⚠ 当前链路非高速加扰(无 CED 统计)→ 无客观判据可优化, 终止。'
+        + ' 一键开眼只在高分辨率/高刷(SSC 点不亮那类)场景有效。');
+      return;
+    }
+    const baseTot = pre.channels.reduce((s, c) => s + c.count, 0);
+    log('基线误码 R/G/B = ' + pre.channels.map(c => c.count).join('/'));
+    // 关自适应环, 否则手动 LE/Tap1 会被硅片冲掉
+    const fz = await api().phytune_dfe_freeze(MON, true, PORT);
+    if (!fz || !fz.ok) { log('关自适应失败, 终止: ' + ((fz && fz.error) || '')); return; }
+    log('已关 DFE 自适应环(A1/B1/C1=0), 开始逐 lane 扫描…');
+    const dwell = 600;
+    const res = [];
+    for (let lane = 0; lane < 3; lane++) {
+      if (_autoEyeCancel) { log('已停止。'); break; }
+      log(`—— 扫 lane${lane} (${['R', 'G', 'B'][lane]}) ——`);
+      const r = await _sweepLane(lane, dwell);
+      if (r === null) { log('该链路不可测, 终止扫描。'); break; }
+      res.push({ lane, v: r.v, e: r.e });
+      log(`lane${lane} 定为 LE/Tap1=${r.v} (误码 ${r.e}), 已📌固化。`);
+    }
+    if (res.length) {
+      const tot = res.reduce((s, r) => s + r.e, 0);
+      log(`✅ 一键开眼完成: ${res.map(r => `L${r.lane}=${r.v}(${r.e})`).join('  ')}`
+        + `  | 残余误码合计 ${tot}` + (baseTot ? ` (基线 ${baseTot})` : ''));
+      log('值已固化, 本次会话内重锁会盖回。彻底恢复自适应=拔插/断电。坏了点🧹清空固化。');
+    }
+    await _pollCed();
+  } catch (e) { log('一键开眼异常: ' + e); }
+  finally { _autoEyeRunning = false; _autoEyeCancel = false; _setEyeBtn(false); }
+}
+
 function refreshAll() { return lock(_refreshAllInner); }
 async function _refreshAllInner() {
   spin(true);
@@ -210,7 +319,38 @@ async function _refreshAllInner() {
     if (okCount === 0 && fail > 0) {
       log('全部读失败 → 已自动重认板。若仍失败: ①等画面完全稳定(重锁后 DDC 要缓几秒) ②确认线接在所选 HDMI 口。');
     }
+    await _pollCed();   // 顺带刷一次误码
   } finally { spin(false); }
+}
+
+// ---- 实时误码 CED: 三通道 R/G/B 字符误码增量(读后清零, 每轮=一段误码率) ----
+// 调 LE/Tap1/CDR 时盯哪条通道往下掉 = 方向对。仅高速加扰 HDMI2.0 链路有数。
+function setCedState(txt, cls) {
+  const st = el('ced-st'); if (!st) return;
+  st.textContent = txt; st.className = 'ced-st ' + (cls || '');
+}
+function paintCed(channels, valid) {
+  for (const c of (channels || [])) {
+    const cell = el('ced-' + c.name); if (!cell) continue;
+    const b = cell.querySelector('b');
+    if (!valid || !c.valid) { b.textContent = '—'; cell.className = 'cedc idle'; continue; }
+    b.textContent = c.count;
+    cell.className = 'cedc ' + (c.count === 0 ? 'zero' : 'err');
+  }
+}
+async function _pollCed() {
+  try {
+    const r = await api().phytune_ced_read(MON, PORT);
+    if (!r || !r.ok) { setCedState('读失败', 'bad'); paintCed(null, false); return; }
+    if (!r.valid) {
+      setCedState('链路未加扰/低速 — 无误码统计(高分辨率高速链路下才有)', 'idle');
+      paintCed(r.channels, false); return;
+    }
+    setCedState('每≈2秒增量, 越小越好; 某通道在涨=那条lane加LE/Tap1', 'ok');
+    paintCed(r.channels, true);
+    const tot = r.channels.reduce((s, c) => s + c.count, 0);
+    if (tot > 0) log(`误码 R/G/B = ${r.channels.map(c => c.count).join('/')}`);
+  } catch (e) { setCedState('异常', 'bad'); }
 }
 
 // ---- 自动刷新: 固件会在背后改寄存器(重锁复位 Icp 等), UI 须周期性读回才不显示陈旧值 ----
@@ -232,6 +372,7 @@ async function _pollReadAll() {
   }
   // 全失败 = 句柄可能已失效(拔插过) → 自动重认板一次(免去手动点)。
   if (okc === 0 && Object.keys(PARAMS).length) await pickBoard();
+  await _pollCed();   // 误码监视也并入这一轮(同锁内, 不与参数读交错)
 }
 
 // frameless 窗口: 关闭/最小化/边角缩放/拖动全靠前端接到 Api(同主 UI 机制)。
