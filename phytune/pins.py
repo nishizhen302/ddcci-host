@@ -57,7 +57,8 @@ class Pin(object):
 
     def set_mux(self, ra, val):
         """切复用: 校验 val 合法(在 funcs 且非 reserved) -> 读改写位域。
-        非法值抛 ValueError; peek 失败返回 False; 否则返回 poke 结果。"""
+        非法值抛 ValueError; peek 失败返回 False; 否则返回 poke 结果。
+        写后回读确认由调用方/UI 的 round-trip 承担(前端写完即重发 pin_read 刷新显示)。"""
         val = int(val)
         if val not in self._kind_by_val or self._kind_by_val[val] == RESERVED:
             raise ValueError("%s 不支持复用值 %d" % (self.ball, val))
