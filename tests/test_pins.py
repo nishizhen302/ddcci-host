@@ -64,12 +64,21 @@ def test_gpio_set_requires_gpio_output_mode():
 
 
 def test_gpio_set_writes_bit_when_output():
-    # 复用=2(开漏输出), 数据寄存器当前 0x00 → 置1 应写 0x01 到 0xFE00
-    be = FakeBackend(get_returns={(0, vc.VCP_ADDR_LATCH): (0x02, 0xFF)})
+    # 复用寄存器 0x10:00 = 0x02(开漏输出); 数据寄存器 0xFE:00 = 0x00 → 置1 读改写应写 0x01
+    be = FakeBackend(peek_returns={(0x10, 0x00): 0x02, (0xFE, 0x00): 0x00})
     ra = RegAccess(be, 0)
     assert _pin_y6().gpio_set(ra, 1) is True
     pokes = [s for s in be.sets if s[1] == vc.VCP_POKE]
     assert pokes[-1] == (0, vc.VCP_POKE, vc.pack_poke(0x01, 0))
+
+
+def test_gpio_set_read_modify_write_preserves_other_bits():
+    # 数据寄存器 0xFE:00 已有 0xF0(高位别的脚/控制位); 置 bit0 应得 0xF1, 不能清掉高位
+    be = FakeBackend(peek_returns={(0x10, 0x00): 0x02, (0xFE, 0x00): 0xF0})
+    ra = RegAccess(be, 0)
+    assert _pin_y6().gpio_set(ra, 1) is True
+    pokes = [s for s in be.sets if s[1] == vc.VCP_POKE]
+    assert pokes[-1] == (0, vc.VCP_POKE, vc.pack_poke(0xF1, 0))
 
 
 def test_gpio_set_rejected_when_no_mapping():

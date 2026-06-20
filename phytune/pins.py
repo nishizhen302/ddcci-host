@@ -90,7 +90,10 @@ class Pin(object):
         page = int(self.gpio["data_page"])
         off = int(self.gpio["data_offset"])
         bit = int(self.gpio["bit"])
-        newb = (1 << bit) if int(level) else 0
+        cur = ra.peek(page, off)
+        if cur is None:
+            return False
+        newb = (cur | (1 << bit)) if int(level) else (cur & ~(1 << bit))
         return ra.poke(page, off, newb)
 
     def reset_default(self, ra):

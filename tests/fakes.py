@@ -8,12 +8,15 @@ class FakeBackend(Backend):
     name = "fake"
     address = 0x6E
 
-    def __init__(self, get_returns=None, scdc_returns=None):
+    def __init__(self, get_returns=None, scdc_returns=None, peek_returns=None):
         # get_returns: {(mon_id, code): (current, maximum)} 预置 get_vcp 应答
         self._get_returns = dict(get_returns or {})
         # scdc_returns: {scdc_offset: byte} 模拟 SCDC 间接寄存器内容
         # (先 poke 0x39=偏移 选定, 再 peek 0x3A 读出对应字节)
         self._scdc_returns = dict(scdc_returns or {})
+        # peek_returns: {(page, offset): byte} 按锁存地址区分 peek 应答
+        # (RegAccess.peek 先锁存地址再读 0xE5; 多个不同寄存器的读靠这个区分)
+        self._peek_returns = dict(peek_returns or {})
         self.sets = []          # [(mon_id, code, value), ...] 按序记录所有 set_vcp
         self.set_result = True  # set_vcp 返回值(可改成 False 测失败路径)
         self._last_latch = None  # 最近一次锁存的 16bit 地址
@@ -28,6 +31,11 @@ class FakeBackend(Backend):
                 and (self._last_latch & 0xFF) == 0x3A
                 and self._scdc_sel in self._scdc_returns):
             return (self._scdc_returns[self._scdc_sel], 0xFF)
+        # 按锁存地址区分的 peek 应答 (page, offset)
+        if code == vc.VCP_ADDR_LATCH and self._last_latch is not None:
+            key = ((self._last_latch >> 8) & 0xFF, self._last_latch & 0xFF)
+            if key in self._peek_returns:
+                return (self._peek_returns[key], 0xFF)
         return self._get_returns.get((mon_id, code))
 
     def set_vcp(self, mon_id, code, value):
