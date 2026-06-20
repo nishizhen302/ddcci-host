@@ -16,7 +16,7 @@ from ddcci_core import select_backend, pick_default_monitor, parse_caps
 from phytune.regaccess import RegAccess
 from phytune.params import load_params
 from phytune import ced as ced_mod
-from phytune.pins import load_pins, GPIO_OUT_KINDS as P_GPIO_OUT_KINDS
+from phytune.pins import load_pins
 
 # 源码运行时 = 脚本目录; PyInstaller 打包后 = 解压临时目录(_MEIPASS), ui 资源在其下
 HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -499,8 +499,8 @@ class Api:
                 return {"ok": False, "error": "读 %s 失败" % ball,
                         "hint": "板不在线或 DDC/CI 未开; 拔插后点 ↻ 重新枚举。"}
             level = None
-            # kind 对未知复用值为 None; None not in P_GPIO_OUT_KINDS, 自然按非 GPIO 处理
-            if mux["kind"] in P_GPIO_OUT_KINDS and pin.gpio:
+            # GPIO 模式(输入或输出)都回读电平; 非 GPIO(外设/保留/未知)或无映射不读
+            if pin.gpio and (mux["kind"] or "").startswith("gpio"):
                 level = pin.gpio_read(ra)
             return {"ok": True, "mux": mux, "level": level}
         except Exception as e:

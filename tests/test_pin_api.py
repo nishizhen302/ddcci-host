@@ -61,6 +61,15 @@ def test_pin_read_reports_mux_and_level():
     assert r["level"] == 1
 
 
+def test_pin_read_input_pin_also_reports_level():
+    # 复用=0(输入); 电平 0xFE:00 = 0x01 → 输入脚也应回读电平
+    api = _api_with(peek_returns={(0x10, 0x20): 0x00, (0xFE, 0x00): 0x01})
+    r = api.pin_read("TESTA", 0)
+    assert r["ok"] is True
+    assert r["mux"]["kind"] == "gpio_in"
+    assert r["level"] == 1
+
+
 def test_gpio_read_ok_and_fail():
     # 电平 0xFE:00 = 0x01 → ok level 1
     api = _api_with(peek_returns={(0xFE, 0x00): 0x01})
