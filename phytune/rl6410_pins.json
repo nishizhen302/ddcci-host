@@ -238,8 +238,8 @@
     "data_offset": 20,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AE20",
@@ -340,8 +340,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AF27",
@@ -457,8 +457,8 @@
     "data_offset": 47,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AF29",
@@ -503,8 +503,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AF6",
@@ -621,8 +621,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AG25",
@@ -677,8 +677,8 @@
     "data_offset": 43,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AG26",
@@ -733,8 +733,8 @@
     "data_offset": 45,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AG27",
@@ -835,8 +835,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AG29",
@@ -891,8 +891,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AG6",
@@ -1009,8 +1009,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AG9",
@@ -1060,8 +1060,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AH20",
@@ -1208,8 +1208,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AH25",
@@ -1254,8 +1254,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AH26",
@@ -1310,8 +1310,8 @@
     "data_offset": 44,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AH27",
@@ -1376,8 +1376,8 @@
     "data_offset": 21,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AH5",
@@ -1970,8 +1970,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AJ26",
@@ -2026,8 +2026,8 @@
     "data_offset": 46,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AJ27",
@@ -2087,8 +2087,8 @@
     }
    ],
    "gpio": null,
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AJ28",
@@ -2143,8 +2143,8 @@
     "data_offset": 27,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AJ3",
@@ -2276,8 +2276,8 @@
     "data_offset": 7,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AJ8",
@@ -2603,8 +2603,8 @@
     "data_offset": 8,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AK5",
@@ -2645,7 +2645,7 @@
     "bit": 0
    },
    "danger": true,
-   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+   "danger_reason": "DDC 控制口 (默认功能), 改动可能黑屏/断链路"
   },
   {
    "ball": "AL1",
@@ -2976,8 +2976,8 @@
     "data_offset": 9,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AL5",
@@ -3018,7 +3018,7 @@
     "bit": 0
    },
    "danger": true,
-   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+   "danger_reason": "DDC 控制口 (默认功能), 改动可能黑屏/断链路"
   },
   {
    "ball": "AM1",
@@ -3226,8 +3226,8 @@
     "data_offset": 11,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AM3",
@@ -3282,8 +3282,8 @@
     "data_offset": 12,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "AM4",
@@ -3333,8 +3333,8 @@
     "data_offset": 10,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "C6",
@@ -3477,8 +3477,8 @@
     "data_offset": 13,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "H6",
@@ -3533,8 +3533,8 @@
     "data_offset": 15,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "H7",
@@ -3625,8 +3625,8 @@
     "data_offset": 33,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "J28_OFF_REGION",
@@ -3686,8 +3686,8 @@
     "data_offset": 32,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "J29_OFF_REGION",
@@ -3747,8 +3747,8 @@
     "data_offset": 26,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "J5",
@@ -3784,7 +3784,7 @@
    ],
    "gpio": null,
    "danger": true,
-   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+   "danger_reason": "DDC 控制口 (默认功能), 改动可能黑屏/断链路"
   },
   {
    "ball": "J6",
@@ -3820,7 +3820,7 @@
    ],
    "gpio": null,
    "danger": true,
-   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+   "danger_reason": "DDC 控制口 (默认功能), 改动可能黑屏/断链路"
   },
   {
    "ball": "J7",
@@ -3875,8 +3875,8 @@
     "data_offset": 14,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "K27_OFF_REGION",
@@ -3931,8 +3931,8 @@
     "data_offset": 29,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "K28_OFF_REGION",
@@ -3992,8 +3992,8 @@
     "data_offset": 34,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "K29_OFF_REGION",
@@ -4053,8 +4053,8 @@
     "data_offset": 31,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "K5",
@@ -4090,7 +4090,7 @@
    ],
    "gpio": null,
    "danger": true,
-   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+   "danger_reason": "DDC 控制口 (默认功能), 改动可能黑屏/断链路"
   },
   {
    "ball": "K6",
@@ -4126,7 +4126,7 @@
    ],
    "gpio": null,
    "danger": true,
-   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+   "danger_reason": "DDC 控制口 (默认功能), 改动可能黑屏/断链路"
   },
   {
    "ball": "K7",
@@ -4214,7 +4214,7 @@
    ],
    "gpio": null,
    "danger": true,
-   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+   "danger_reason": "DDC 控制口 (默认功能), 改动可能黑屏/断链路"
   },
   {
    "ball": "L6",
@@ -4250,7 +4250,7 @@
    ],
    "gpio": null,
    "danger": true,
-   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+   "danger_reason": "DDC 控制口 (默认功能), 改动可能黑屏/断链路"
   },
   {
    "ball": "M27_OFF_REGION",
@@ -4366,8 +4366,8 @@
     "data_offset": 25,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "M29_OFF_REGION",
@@ -4422,8 +4422,8 @@
     "data_offset": 24,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "M5",
@@ -4459,7 +4459,7 @@
    ],
    "gpio": null,
    "danger": true,
-   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+   "danger_reason": "DDC 控制口 (默认功能), 改动可能黑屏/断链路"
   },
   {
    "ball": "M6",
@@ -4495,7 +4495,7 @@
    ],
    "gpio": null,
    "danger": true,
-   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+   "danger_reason": "DDC 控制口 (默认功能), 改动可能黑屏/断链路"
   },
   {
    "ball": "N27_OFF_REGION",
@@ -4550,8 +4550,8 @@
     "data_offset": 28,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "N28_OFF_REGION",
@@ -4606,8 +4606,8 @@
     "data_offset": 23,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "N29_OFF_REGION",
@@ -4662,8 +4662,8 @@
     "data_offset": 22,
     "bit": 0
    },
-   "danger": true,
-   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+   "danger": false,
+   "danger_reason": ""
   },
   {
    "ball": "N5",

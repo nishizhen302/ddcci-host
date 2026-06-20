@@ -138,13 +138,15 @@ def classify_domain(funcs):
     return "OTHER"
 
 
-def classify_danger(ball, funcs):
+def classify_danger(ball, default_name):
+    """按本板**默认功能**判危险(别拆正在干活的脚); 只看默认功能名, 不看备选。
+    default_name = 该脚默认复用值对应的功能名。"""
     if ball in DANGER_OVERRIDE:
         return True, DANGER_OVERRIDE[ball]
-    names = " ".join(f["name"].upper() for f in funcs)
+    up = (default_name or "").upper()
     for reason, kws in DANGER_RULES:
-        if any(k in names for k in kws):
-            return True, reason + " 相关, 改动可能黑屏/断链路"
+        if any(k in up for k in kws):
+            return True, reason + " (默认功能), 改动可能黑屏/断链路"
     return False, ""
 
 
@@ -157,7 +159,8 @@ def build(example_text, demod_text, mcu_text):
         e = ex[ball]
         funcs = e["funcs"]
         default = dm[ball]["default"] if ball in dm else e["default"]
-        danger, reason = classify_danger(ball, funcs)
+        default_name = next((f["name"] for f in funcs if f["val"] == default), "")
+        danger, reason = classify_danger(ball, default_name)
         pins.append({
             "ball": ball, "share": e["share"], "default": default,
             "domain": classify_domain(funcs), "funcs": funcs,

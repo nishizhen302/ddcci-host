@@ -9,7 +9,7 @@ _EXAMPLE = """
 #define _PIN_TESTB                 (0 & 0x07) // Page 10-0x21[2:0]
 // 0 ~ 8 (0: P4D1i<I>, 2: P4D1o<OD>, 8: IICSCL2)
 
-#define _PIN_TESTC                 (0 & 0x07) // Page 10-0x22[2:0]
+#define _PIN_TESTC                 (1 & 0x07) // Page 10-0x22[2:0]
 // 0 ~ 1 (0: P5D0i<I>, 1: VCCK_OFF_EN)
 
 #define _PIN_TESTD                 (0 & 0x07) // Page 10-0x23[2:0]
@@ -104,11 +104,13 @@ def test_classify_domain():
     assert G.classify_domain(d["TESTA"]["funcs"]) == "GPIO"
 
 
-def test_classify_danger():
-    d = G.parse_pinshare(_EXAMPLE)
-    dng, reason = G.classify_danger("TESTC", d["TESTC"]["funcs"])
+def test_classify_danger_by_default_func():
+    # 只看默认功能名: VCCK 默认 -> 危险; gpio 默认 -> 不危险
+    dng, reason = G.classify_danger("X", "VCCK_OFF_EN")
     assert dng is True and reason
-    assert G.classify_danger("TESTA", d["TESTA"]["funcs"]) == (False, "")
+    assert G.classify_danger("X", "P4D0i") == (False, "")
+    # 带危险备选但默认是 gpio 的脚不应标红 (口径=按默认功能)
+    assert G.classify_danger("Y", "P4D9o") == (False, "")
 
 
 def test_build_merges_default_from_demod():
