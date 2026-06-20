@@ -16,6 +16,7 @@ from ddcci_core import select_backend, pick_default_monitor, parse_caps
 from phytune.regaccess import RegAccess
 from phytune.params import load_params
 from phytune import ced as ced_mod
+from phytune.pins import load_pins, GPIO_OUT_KINDS as P_GPIO_OUT_KINDS
 
 # 源码运行时 = 脚本目录; PyInstaller 打包后 = 解压临时目录(_MEIPASS), ui 资源在其下
 HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -472,6 +473,72 @@ class Api:
         except Exception as e:
             return _err(e)
 
+    # ---- 管脚配置器 ----
+    def _pindb(self):
+        if getattr(self, "_pin_db", None) is None:
+            self._pin_db = load_pins()
+        return self._pin_db
+
+    def pin_db(self):
+        """返回按域分组的全脚静态表(给前端建列表)。"""
+        try:
+            db = self._pindb()
+            domains = [{"domain": d, "pins": [p.to_dict() for p in ps]}
+                       for d, ps in db.by_domain()]
+            return {"ok": True, "domains": domains}
+        except Exception as e:
+            return _err(e)
+
+    def pin_read(self, ball, mon_id):
+        """读单脚当前复用值/功能名(+GPIO 电平, 若当前是 GPIO 输出)。"""
+        try:
+            ra = RegAccess(self._ensure(), int(mon_id))
+            pin = self._pindb().by_ball(ball)
+            mux = pin.read_mux(ra)
+            if mux is None:
+                return {"ok": False, "error": "读 %s 失败" % ball,
+                        "hint": "板不在线或 DDC/CI 未开; 拔插后点 ↻ 重新枚举。"}
+            level = None
+            if mux["kind"] in P_GPIO_OUT_KINDS and pin.gpio:
+                level = pin.gpio_read(ra)
+            return {"ok": True, "mux": mux, "level": level}
+        except Exception as e:
+            return _err(e)
+
+    def pin_set_mux(self, ball, val, mon_id):
+        try:
+            ra = RegAccess(self._ensure(), int(mon_id))
+            ok = self._pindb().by_ball(ball).set_mux(ra, int(val))
+            return {"ok": True} if ok else {"ok": False, "error": "切 %s 复用失败" % ball}
+        except Exception as e:
+            return _err(e)
+
+    def gpio_read(self, ball, mon_id):
+        try:
+            ra = RegAccess(self._ensure(), int(mon_id))
+            v = self._pindb().by_ball(ball).gpio_read(ra)
+            if v is None:
+                return {"ok": False, "error": "%s 无 GPIO 映射或读失败" % ball}
+            return {"ok": True, "level": v}
+        except Exception as e:
+            return _err(e)
+
+    def gpio_set(self, ball, level, mon_id):
+        try:
+            ra = RegAccess(self._ensure(), int(mon_id))
+            ok = self._pindb().by_ball(ball).gpio_set(ra, int(level))
+            return {"ok": True} if ok else {"ok": False, "error": "置 %s 电平失败" % ball}
+        except Exception as e:
+            return _err(e)
+
+    def pin_reset_default(self, ball, mon_id):
+        try:
+            ra = RegAccess(self._ensure(), int(mon_id))
+            ok = self._pindb().by_ball(ball).reset_default(ra)
+            return {"ok": True} if ok else {"ok": False, "error": "还原 %s 默认失败" % ball}
+        except Exception as e:
+            return _err(e)
+
     def set_backend(self, name):
         try:
             if self._be is not None:
@@ -515,7 +582,12 @@ class Api:
 
 def main():
     api = Api()
-    page = "phytune/index.html" if os.environ.get("DDCCI_PHYTUNE") else "index.html"
+    if os.environ.get("DDCCI_PINMUX"):
+        page = "pinmux/index.html"
+    elif os.environ.get("DDCCI_PHYTUNE"):
+        page = "phytune/index.html"
+    else:
+        page = "index.html"
     window = webview.create_window(
         WIN_TITLE,
         os.path.join(HERE, "ui", page),
