@@ -81,6 +81,29 @@ def test_gpio_set_read_modify_write_preserves_other_bits():
     assert pokes[-1] == (0, vc.VCP_POKE, vc.pack_poke(0xF1, 0))
 
 
+def test_gpio_set_clears_bit():
+    # 复用=2(开漏输出); 数据寄存器 0xFF → 清 bit0 应写 0xFE(保留高位)
+    be = FakeBackend(peek_returns={(0x10, 0x00): 0x02, (0xFE, 0x00): 0xFF})
+    ra = RegAccess(be, 0)
+    assert _pin_y6().gpio_set(ra, 0) is True
+    pokes = [s for s in be.sets if s[1] == vc.VCP_POKE]
+    assert pokes[-1] == (0, vc.VCP_POKE, vc.pack_poke(0xFE, 0))
+
+
+def test_gpio_read_extracts_bit():
+    # 数据寄存器 0xFE:00 = 0x01 → bit0 = 1; = 0x00 → 0
+    be1 = FakeBackend(peek_returns={(0xFE, 0x00): 0x01})
+    assert _pin_y6().gpio_read(RegAccess(be1, 0)) == 1
+    be0 = FakeBackend(peek_returns={(0xFE, 0x00): 0x00})
+    assert _pin_y6().gpio_read(RegAccess(be0, 0)) == 0
+
+
+def test_gpio_read_none_without_mapping():
+    p = _pin_y6()
+    p.gpio = None
+    assert p.gpio_read(RegAccess(FakeBackend(), 0)) is None
+
+
 def test_gpio_set_rejected_when_no_mapping():
     p = _pin_y6()
     p.gpio = None
