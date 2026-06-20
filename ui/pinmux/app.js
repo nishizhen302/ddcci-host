@@ -98,7 +98,7 @@ function renderDetail(p, state){
   const isIn = curKind==="gpio_in";
   const hasGpio = !!p.gpio;
   const level = state? state.level : null;
-  const swCls = "sw"+(level?" on":"")+((!isOut||!hasGpio)?" disabled":"");
+  const swCls = "sw"+(level===1?" on":"")+((!isOut||!hasGpio)?" disabled":"");
   let gpioRow="";
   if(hasGpio && (isOut||isIn)){
     gpioRow = isOut
@@ -123,7 +123,7 @@ function renderDetail(p, state){
   if(el("sw") && isOut && hasGpio) el("sw").onclick=()=>toggleLevel(p);
 }
 function maskBits(s){
-  let hi=s.shift, m=s.mask>>s.shift, w=0; while(m){m>>=1;w++;} hi=s.shift+w-1;
+  let m=s.mask>>s.shift, w=0; while(m){m>>=1;w++;} const hi=s.shift+w-1;
   return w<=1? String(s.shift) : `${hi}:${s.shift}`;
 }
 
