@@ -69,13 +69,21 @@ def parse_pinshare(text):
     out = {}
     i = 0
     while i < len(lines):
-        m = _PIN_RE.search(lines[i])
+        stripped = lines[i].lstrip()
+        # 跳过注释掉的 #define (固件头常有注释的备用 PCB pinshare, 不能当真脚解析)
+        if not stripped.startswith("#define"):
+            i += 1
+            continue
+        m = _PIN_RE.search(stripped)
         if not m:
             i += 1
             continue
         ball, dflt, _maskhex, pg, off, hi, lo = m.groups()
-        shift = int(lo) if lo is not None else int(hi)
-        width = int(hi) - shift + 1
+        # 位域 [hi:lo] 或单 bit [n]; 用 min/max 兼容偶发反写 [lo:hi], 不至于负位移崩溃
+        a = int(hi)
+        b = int(lo) if lo is not None else a
+        shift = min(a, b)
+        width = abs(a - b) + 1
         mask = ((1 << width) - 1) << shift
         j = i + 1
         comment = []
@@ -86,6 +94,7 @@ def parse_pinshare(text):
         for fm in _FUNC_RE.finditer(" ".join(comment)):
             kind, name = _kind_and_name(fm.group(2))
             funcs.append({"val": int(fm.group(1)), "name": name, "kind": kind})
+        funcs.sort(key=lambda f: f["val"])   # 按复用值排序, 使下拉/索引稳定
         out[ball] = {
             "default": int(dflt),
             "share": {"page": int(pg, 16), "offset": int(off, 16),
@@ -178,6 +187,9 @@ def main():
     ap.add_argument("--mcu", default=_DEF_MCU)
     ap.add_argument("--out", default=_DEF_OUT)
     a = ap.parse_args()
+    for opt, val in (("example", a.example), ("demod", a.demod), ("mcu", a.mcu)):
+        if not os.path.exists(val):
+            ap.error("--%s 路径不存在: %r — 本机请显式传入正确路径" % (opt, val))
     data = build(_read(a.example), _read(a.demod), _read(a.mcu))
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=1)

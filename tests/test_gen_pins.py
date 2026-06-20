@@ -38,6 +38,39 @@ def test_parse_pinshare_fields():
     assert a["funcs"][2]["kind"] == "gpio_out_od"
 
 
+def test_parse_pinshare_skips_commented_define():
+    # 注释掉的 #define 不能被当真脚解析 (固件头常有注释的备用 pinshare)
+    text = """
+// #define _PIN_GHOST              (3 & 0x07) // Page 10-0x99[2:0]
+// 0 ~ 2 (0: GHOSTi<I>)
+#define _PIN_REAL                  (1 & 0x07) // Page 10-0x10[2:0]
+// 0 ~ 1 (0: P4D2i<I>, 1: P4D2o<PP>)
+"""
+    d = G.parse_pinshare(text)
+    assert "GHOST" not in d
+    assert "REAL" in d
+
+
+def test_parse_pinshare_single_bit_field():
+    # 单 bit [n] -> shift=n, mask=1<<n
+    text = """
+#define _PIN_SB                    (0 & 0x40) // Page 11-0x05[6]
+// 0 ~ 1 (0: off, 1: on)
+"""
+    s = G.parse_pinshare(text)["SB"]["share"]
+    assert s == {"page": 0x11, "offset": 0x05, "mask": 0x40, "shift": 6}
+
+
+def test_parse_pinshare_sorts_funcs_by_val():
+    # 注释里乱序列出, funcs 应按 val 升序
+    text = """
+#define _PIN_OO                    (0 & 0x07) // Page 10-0x30[2:0]
+// (2: P4D9o<OD>, 0: P4D9i<I>, 1: P4D9o<PP>)
+"""
+    vals = [f["val"] for f in G.parse_pinshare(text)["OO"]["funcs"]]
+    assert vals == [0, 1, 2]
+
+
 def test_parse_pinshare_multiline_comment():
     d = G.parse_pinshare(_EXAMPLE)
     names = [f["name"] for f in d["TESTD"]["funcs"]]
