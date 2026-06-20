@@ -61,6 +61,23 @@ def test_pin_read_reports_mux_and_level():
     assert r["level"] == 1
 
 
+def test_gpio_read_ok_and_fail():
+    # 电平 0xFE:00 = 0x01 → ok level 1
+    api = _api_with(peek_returns={(0xFE, 0x00): 0x01})
+    r = api.gpio_read("TESTA", 0)
+    assert r["ok"] is True and r["level"] == 1
+    # 无 peek 应答 → gpio_read 返回 None → {ok:False}
+    api2 = _api_with()
+    assert api2.gpio_read("TESTA", 0)["ok"] is False
+
+
+def test_pin_read_offline_returns_hint():
+    # 复用读不回(无 peek 应答) → {ok:False, hint}
+    api = _api_with()
+    r = api.pin_read("TESTA", 0)
+    assert r["ok"] is False and r["hint"]
+
+
 def test_pin_reset_default():
     api = _api_with(peek_returns={(0x10, 0x20): 0x05})
     r = api.pin_reset_default("TESTA", 0)

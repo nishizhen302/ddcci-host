@@ -499,6 +499,7 @@ class Api:
                 return {"ok": False, "error": "读 %s 失败" % ball,
                         "hint": "板不在线或 DDC/CI 未开; 拔插后点 ↻ 重新枚举。"}
             level = None
+            # kind 对未知复用值为 None; None not in P_GPIO_OUT_KINDS, 自然按非 GPIO 处理
             if mux["kind"] in P_GPIO_OUT_KINDS and pin.gpio:
                 level = pin.gpio_read(ra)
             return {"ok": True, "mux": mux, "level": level}
@@ -506,6 +507,7 @@ class Api:
             return _err(e)
 
     def pin_set_mux(self, ball, val, mon_id):
+        """切某脚复用功能(读改写 pinshare 位域)。"""
         try:
             ra = RegAccess(self._ensure(), int(mon_id))
             ok = self._pindb().by_ball(ball).set_mux(ra, int(val))
@@ -514,6 +516,7 @@ class Api:
             return _err(e)
 
     def gpio_read(self, ball, mon_id):
+        """读某脚 GPIO 电平(0/1)。"""
         try:
             ra = RegAccess(self._ensure(), int(mon_id))
             v = self._pindb().by_ball(ball).gpio_read(ra)
@@ -524,6 +527,7 @@ class Api:
             return _err(e)
 
     def gpio_set(self, ball, level, mon_id):
+        """置某脚 GPIO 电平(仅当前为 GPIO 输出时有效, 否则 Pin 抛 ValueError)。"""
         try:
             ra = RegAccess(self._ensure(), int(mon_id))
             ok = self._pindb().by_ball(ball).gpio_set(ra, int(level))
@@ -532,6 +536,7 @@ class Api:
             return _err(e)
 
     def pin_reset_default(self, ball, mon_id):
+        """把某脚复用还原成本板默认值。"""
         try:
             ra = RegAccess(self._ensure(), int(mon_id))
             ok = self._pindb().by_ball(ball).reset_default(ra)
