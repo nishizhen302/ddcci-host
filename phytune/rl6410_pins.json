@@ -1,0 +1,4865 @@
+{
+ "domain_order": [
+  "GPIO",
+  "I2C_DDC",
+  "AUX_DP",
+  "LVDS_DISP",
+  "PWM_BL",
+  "FLASH_SPI",
+  "POWER_CTRL",
+  "TEST_DBG",
+  "OTHER"
+ ],
+ "pins": [
+  {
+   "ball": "AA28",
+   "share": {
+    "page": 16,
+    "offset": 58,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P9D2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P9D2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P9D2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Vb1_htpd_n",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Dptx_hpd1_org",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P9D2",
+    "data_page": 254,
+    "data_offset": 42,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AA29",
+   "share": {
+    "page": 16,
+    "offset": 57,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P9D1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P9D1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P9D1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Vb1_lock_n",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Dptx_hpd2_org",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P9D1",
+    "data_page": 254,
+    "data_offset": 41,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AA5",
+   "share": {
+    "page": 16,
+    "offset": 3,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P1D3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "P1D3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "AUX_N0",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AA6",
+   "share": {
+    "page": 16,
+    "offset": 2,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P1D2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "P1D2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "AUX_P0",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AD28",
+   "share": {
+    "page": 16,
+    "offset": 36,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 8,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P6D4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P6D4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P6D4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "TCON[4]",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    },
+    {
+     "val": 8,
+     "name": "IICSCL1",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": {
+    "name": "P6D4",
+    "data_page": 254,
+    "data_offset": 20,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AE20",
+   "share": {
+    "page": 16,
+    "offset": 78,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PBD6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PBD6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PBD6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Audio_ref",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Mck",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AE28",
+   "share": {
+    "page": 16,
+    "offset": 65,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PAD1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PAD1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PAD1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "TCON[1]",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 5,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    },
+    {
+     "val": 8,
+     "name": "RXD",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AF27",
+   "share": {
+    "page": 16,
+    "offset": 73,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PBD1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PBD1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PBD1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Mck",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AF28",
+   "share": {
+    "page": 16,
+    "offset": 63,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P9D7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P9D7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P9D7o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM1",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM1",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[3]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P9D7",
+    "data_page": 254,
+    "data_offset": 47,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AF29",
+   "share": {
+    "page": 16,
+    "offset": 69,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PAD5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PAD5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PAD5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "TCON[11]",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd2",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Spdif2",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AF6",
+   "share": {
+    "page": 16,
+    "offset": 88,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PDD0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PDD0o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PDD0o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AF7",
+   "share": {
+    "page": 16,
+    "offset": 87,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PCD7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PCD7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PCD7o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AG24",
+   "share": {
+    "page": 16,
+    "offset": 64,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PAD0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PAD0o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PAD0o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM0",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM0",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[2]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AG25",
+   "share": {
+    "page": 16,
+    "offset": 59,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P9D3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P9D3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P9D3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM5",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM5",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[7]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "T0",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P9D3",
+    "data_page": 254,
+    "data_offset": 43,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AG26",
+   "share": {
+    "page": 16,
+    "offset": 61,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P9D5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P9D5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P9D5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM3",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM3",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[5]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "T2",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P9D5",
+    "data_page": 254,
+    "data_offset": 45,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AG27",
+   "share": {
+    "page": 16,
+    "offset": 75,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PBD3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PBD3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PBD3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Ws",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AG28",
+   "share": {
+    "page": 16,
+    "offset": 71,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PAD7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PAD7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PAD7o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "TCON[9]",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd0",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Spdif0",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AG29",
+   "share": {
+    "page": 16,
+    "offset": 67,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PAD3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PAD3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PAD3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "TCON[13]",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AG6",
+   "share": {
+    "page": 16,
+    "offset": 85,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PCD5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PCD5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PCD5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Dptx_hpd_org",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AG7",
+   "share": {
+    "page": 16,
+    "offset": 89,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PDD1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PDD1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PDD1o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AG8",
+   "share": {
+    "page": 16,
+    "offset": 93,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 6,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PDD5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PDD5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PDD5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM1",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM1",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[7]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "IICSCL2",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AG9",
+   "share": {
+    "page": 16,
+    "offset": 94,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 6,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PDD6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PDD6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PDD6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM0",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM0",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[3]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "IICSDA2",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AH20",
+   "share": {
+    "page": 16,
+    "offset": 55,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "FLASH_SPI",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P8D7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P8D7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P8D7o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "T2ex",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Usb_spi_ceb1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P8D7",
+    "data_page": 254,
+    "data_offset": 39,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AH21",
+   "share": {
+    "page": 16,
+    "offset": 51,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "FLASH_SPI",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P8D3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P8D3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P8D3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "CLKO",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Usb_spi_clk",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P8D3",
+    "data_page": 254,
+    "data_offset": 35,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AH24",
+   "share": {
+    "page": 16,
+    "offset": 72,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PBD0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PBD0o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PBD0o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "TCON[8]",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AH25",
+   "share": {
+    "page": 16,
+    "offset": 68,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PAD4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PAD4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PAD4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "TCON[12]",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd3",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Spdif3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AH26",
+   "share": {
+    "page": 16,
+    "offset": 60,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P9D4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P9D4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P9D4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM4",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM4",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[6]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "T1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P9D4",
+    "data_page": 254,
+    "data_offset": 44,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AH27",
+   "share": {
+    "page": 16,
+    "offset": 37,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 8,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P6D5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P6D5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P6D5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "TCON[5]",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    },
+    {
+     "val": 8,
+     "name": "IICSDA1",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": {
+    "name": "P6D5",
+    "data_page": 254,
+    "data_offset": 21,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AH5",
+   "share": {
+    "page": 16,
+    "offset": 92,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PDD4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PDD4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PDD4o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AH6",
+   "share": {
+    "page": 16,
+    "offset": 91,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PDD3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PDD3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PDD3o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AH7",
+   "share": {
+    "page": 16,
+    "offset": 90,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PDD2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PDD2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PDD2o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AH8",
+   "share": {
+    "page": 16,
+    "offset": 18,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P4D2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P4D2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P4D2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "A-adc1_0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "INT1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P4D2",
+    "data_page": 254,
+    "data_offset": 2,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AH9",
+   "share": {
+    "page": 16,
+    "offset": 17,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P4D1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P4D1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P4D1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "A-adc0_0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Int0",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P4D1",
+    "data_page": 254,
+    "data_offset": 1,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ1",
+   "share": {
+    "page": 16,
+    "offset": 9,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P3D1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P3D1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P3D1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ11",
+   "share": {
+    "page": 16,
+    "offset": 83,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PCD3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PCD3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PCD3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Dptx_aux_ch_p",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ12",
+   "share": {
+    "page": 16,
+    "offset": 84,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PCD4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PCD4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PCD4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Dptx_aux_ch_n",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ18",
+   "share": {
+    "page": 16,
+    "offset": 76,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PBD4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PBD4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PBD4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Line_inl",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Ws",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ2",
+   "share": {
+    "page": 16,
+    "offset": 10,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P3D2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P3D2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P3D2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ20",
+   "share": {
+    "page": 16,
+    "offset": 54,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "FLASH_SPI",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P8D6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P8D6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P8D6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "IRQB",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Usb_spi_ceb0",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P8D6",
+    "data_page": 254,
+    "data_offset": 38,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ21",
+   "share": {
+    "page": 16,
+    "offset": 53,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "FLASH_SPI",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P8D5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P8D5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P8D5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "INT1",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Usb_spi_so",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P8D5",
+    "data_page": 254,
+    "data_offset": 37,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ24",
+   "share": {
+    "page": 16,
+    "offset": 74,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PBD2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PBD2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PBD2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Sck",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ25",
+   "share": {
+    "page": 16,
+    "offset": 70,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PAD6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PAD6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PAD6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "TCON[10]",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Spdif1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AJ26",
+   "share": {
+    "page": 16,
+    "offset": 62,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 6,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P9D6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P9D6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P9D6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM2",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM2",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[4]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Irda_in",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P9D6",
+    "data_page": 254,
+    "data_offset": 46,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AJ27",
+   "share": {
+    "page": 16,
+    "offset": 66,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PAD2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PAD2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PAD2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "TCON[0]",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 7,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 8,
+     "name": "TXD",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AJ28",
+   "share": {
+    "page": 16,
+    "offset": 43,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P7D3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P7D3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P7D3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM5",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM5",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[11]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Cryclk",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P7D3",
+    "data_page": 254,
+    "data_offset": 27,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AJ3",
+   "share": {
+    "page": 16,
+    "offset": 8,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P3D0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P3D0o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P3D0o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ4",
+   "share": {
+    "page": 16,
+    "offset": 86,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PCD6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PCD6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PCD6o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ5",
+   "share": {
+    "page": 16,
+    "offset": 23,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P4D7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P4D7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P4D7o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM0",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM0",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[4]",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P4D7",
+    "data_page": 254,
+    "data_offset": 7,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AJ8",
+   "share": {
+    "page": 16,
+    "offset": 20,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P4D4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P4D4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P4D4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "A-adc3_0",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P4D4",
+    "data_page": 254,
+    "data_offset": 4,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AJ9",
+   "share": {
+    "page": 16,
+    "offset": 19,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P4D3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P4D3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P4D3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "A-adc2_0",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P4D3",
+    "data_page": 254,
+    "data_offset": 3,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AK18",
+   "share": {
+    "page": 16,
+    "offset": 77,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PBD5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PBD5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PBD5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Line_inr",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sck",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AK2",
+   "share": {
+    "page": 16,
+    "offset": 12,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P3D4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P3D4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P3D4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AK21",
+   "share": {
+    "page": 16,
+    "offset": 52,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "FLASH_SPI",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P8D4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P8D4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P8D4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "INT0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Usb_spi_si",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P8D4",
+    "data_page": 254,
+    "data_offset": 36,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AK3",
+   "share": {
+    "page": 16,
+    "offset": 11,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P3D3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P3D3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P3D3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AK4",
+   "share": {
+    "page": 16,
+    "offset": 24,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P5D0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P5D0o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P5D0o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM1",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM1",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[5]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "INT0",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P5D0",
+    "data_page": 254,
+    "data_offset": 8,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AK5",
+   "share": {
+    "page": 16,
+    "offset": 22,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P4D6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P4D6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P4D6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Ddcsdavga",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": {
+    "name": "P4D6",
+    "data_page": 254,
+    "data_offset": 6,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AL1",
+   "share": {
+    "page": 16,
+    "offset": 15,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P3D7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P3D7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P3D7o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AL18",
+   "share": {
+    "page": 16,
+    "offset": 79,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PBD7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PBD7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PBD7o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Audio_soutl",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sdo",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Spdif0",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AL19",
+   "share": {
+    "page": 16,
+    "offset": 81,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PCD1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PCD1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PCD1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Audio_houtl",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd2",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Spdif2",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AL2",
+   "share": {
+    "page": 16,
+    "offset": 14,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P3D6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P3D6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P3D6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AL21",
+   "share": {
+    "page": 16,
+    "offset": 56,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P9D0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P9D0o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P9D0o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": {
+    "name": "P9D0",
+    "data_page": 254,
+    "data_offset": 40,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AL3",
+   "share": {
+    "page": 16,
+    "offset": 13,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P3D5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P3D5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P3D5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AL4",
+   "share": {
+    "page": 16,
+    "offset": 25,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P5D1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P5D1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P5D1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM2",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM2",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[7]",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P5D1",
+    "data_page": 254,
+    "data_offset": 9,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AL5",
+   "share": {
+    "page": 16,
+    "offset": 21,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P4D5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P4D5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P4D5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Ddcsclvga",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": {
+    "name": "P4D5",
+    "data_page": 254,
+    "data_offset": 5,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AM1",
+   "share": {
+    "page": 16,
+    "offset": 16,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P4D0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P4D0o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P4D0o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P4D0",
+    "data_page": 254,
+    "data_offset": 0,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AM18",
+   "share": {
+    "page": 16,
+    "offset": 80,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PCD0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PCD0o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PCD0o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Audio_soutr",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Spdif1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AM19",
+   "share": {
+    "page": 16,
+    "offset": 82,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PCD2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PCD2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PCD2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Audio_houtr",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd3",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Spdif3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "AM2",
+   "share": {
+    "page": 16,
+    "offset": 27,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P5D3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P5D3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P5D3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM4",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM4",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[10]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "INT1",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "PWM_IN",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P5D3",
+    "data_page": 254,
+    "data_offset": 11,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AM3",
+   "share": {
+    "page": 16,
+    "offset": 28,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P5D4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P5D4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P5D4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM5",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM5",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[12]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "PWM_OUT",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P5D4",
+    "data_page": 254,
+    "data_offset": 12,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "AM4",
+   "share": {
+    "page": 16,
+    "offset": 26,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P5D2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P5D2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P5D2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM3",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM3",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[8]",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P5D2",
+    "data_page": 254,
+    "data_offset": 10,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "C6",
+   "share": {
+    "page": 16,
+    "offset": 107,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PFD3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PFD3o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PFD3o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "C8",
+   "share": {
+    "page": 16,
+    "offset": 105,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PFD1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PFD1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PFD1o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "F4",
+   "share": {
+    "page": 16,
+    "offset": 6,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P1D6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P1D6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P1D6o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "G7",
+   "share": {
+    "page": 16,
+    "offset": 29,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P5D5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P5D5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P5D5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM2",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM2",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[3]",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P5D5",
+    "data_page": 254,
+    "data_offset": 13,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "H6",
+   "share": {
+    "page": 16,
+    "offset": 31,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 6,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P5D7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P5D7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P5D7o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM1",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM1",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[2]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "EEIICSDA",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": {
+    "name": "P5D7",
+    "data_page": 254,
+    "data_offset": 15,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "H7",
+   "share": {
+    "page": 16,
+    "offset": 103,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PED7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PED7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PED7o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "J27_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 49,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P8D1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P8D1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P8D1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Spdif2",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd2",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "TCON[2]",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P8D1",
+    "data_page": 254,
+    "data_offset": 33,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "J28_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 48,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P8D0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P8D0o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P8D0o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Spdif1",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd1",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "TCON[1]",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P8D0",
+    "data_page": 254,
+    "data_offset": 32,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "J29_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 42,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "PWM_BL",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P7D2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P7D2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P7D2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM4",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM4",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[10]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Disp_frame_start_in",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Disp_frame_start_out",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P7D2",
+    "data_page": 254,
+    "data_offset": 26,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "J5",
+   "share": {
+    "page": 16,
+    "offset": 96,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PED0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "PED0o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "DDCSDA5",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "J6",
+   "share": {
+    "page": 16,
+    "offset": 95,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PDD7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "PDD7o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "DDCSCL5",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "J7",
+   "share": {
+    "page": 16,
+    "offset": 30,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 6,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P5D6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P5D6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P5D6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM0",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM0",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[1]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "EEIICSCL",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": {
+    "name": "P5D6",
+    "data_page": 254,
+    "data_offset": 14,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "K27_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 45,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P7D5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P7D5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P7D5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Sck",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "TCON[13]",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P7D5",
+    "data_page": 254,
+    "data_offset": 29,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "K28_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 50,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P8D2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P8D2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P8D2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Spdif3",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd3",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "TCON[3]",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P8D2",
+    "data_page": 254,
+    "data_offset": 34,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "K29_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 47,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P7D7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P7D7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P7D7o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Spdif0",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Sd0",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "TCON[0]",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P7D7",
+    "data_page": 254,
+    "data_offset": 31,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "K5",
+   "share": {
+    "page": 16,
+    "offset": 98,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PED2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "PED2o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "DDCSDA4",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "K6",
+   "share": {
+    "page": 16,
+    "offset": 97,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PED1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "PED1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "DDCSCL4",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "K7",
+   "share": {
+    "page": 16,
+    "offset": 104,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PFD0i",
+     "kind": "gpio_in"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "L4",
+   "share": {
+    "page": 16,
+    "offset": 4,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 2,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P1D4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P1D4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P1D4o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "L5",
+   "share": {
+    "page": 16,
+    "offset": 100,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PED4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "PED4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "DDCSDA3",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "L6",
+   "share": {
+    "page": 16,
+    "offset": 99,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PED3i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "PED3o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "DDCSCL3",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "M27_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 46,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "TEST_DBG",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P7D6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P7D6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P7D6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Mck",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out2",
+     "kind": "periph"
+    },
+    {
+     "val": 7,
+     "name": "Test4b_out3",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P7D6",
+    "data_page": 254,
+    "data_offset": 30,
+    "bit": 0
+   },
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "M28_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 41,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 6,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P7D1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P7D1o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P7D1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM3",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM3",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[9]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Dptx_aux_ch_n_2",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P7D1",
+    "data_page": 254,
+    "data_offset": 25,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "M29_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 40,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 6,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P7D0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P7D0o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P7D0o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM2",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM3",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[8]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Dptx_aux_ch_p_2",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P7D0",
+    "data_page": 254,
+    "data_offset": 24,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "M5",
+   "share": {
+    "page": 16,
+    "offset": 102,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PED6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "PED6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "DDCSDA2",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "M6",
+   "share": {
+    "page": 16,
+    "offset": 101,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "I2C_DDC",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PED5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "PED5o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "DDCSCL2",
+     "kind": "i2c"
+    }
+   ],
+   "gpio": null,
+   "danger": true,
+   "danger_reason": "DDC 控制口 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "N27_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 44,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 1,
+   "domain": "LVDS_DISP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P7D4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P7D4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P7D4o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "Ws",
+     "kind": "periph"
+    },
+    {
+     "val": 4,
+     "name": "TCON[12]",
+     "kind": "periph"
+    },
+    {
+     "val": 5,
+     "name": "Test4b_out0",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Test4b_out1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P7D4",
+    "data_page": 254,
+    "data_offset": 28,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "N28_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 39,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 6,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P6D7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P6D7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P6D7o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM1",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM1",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[7]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Dptx_aux_ch_n_1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P6D7",
+    "data_page": 254,
+    "data_offset": 23,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "N29_OFF_REGION",
+   "share": {
+    "page": 16,
+    "offset": 38,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 6,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P6D6i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P6D6o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P6D6o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "PWM0",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 4,
+     "name": "PWM0",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 5,
+     "name": "TCON[6]",
+     "kind": "periph"
+    },
+    {
+     "val": 6,
+     "name": "Dptx_aux_ch_p_1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": {
+    "name": "P6D6",
+    "data_page": 254,
+    "data_offset": 22,
+    "bit": 0
+   },
+   "danger": true,
+   "danger_reason": "LVDS/显示 相关, 改动可能黑屏/断链路"
+  },
+  {
+   "ball": "N5",
+   "share": {
+    "page": 16,
+    "offset": 108,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PFD4i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PFD4o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PFD4o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "N6",
+   "share": {
+    "page": 16,
+    "offset": 106,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "PFD2i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "PFD2o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "PFD2o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "W5",
+   "share": {
+    "page": 16,
+    "offset": 7,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P1D7i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P1D7o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P1D7o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "W6",
+   "share": {
+    "page": 16,
+    "offset": 5,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 0,
+   "domain": "GPIO",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P1D5i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "P1D5o",
+     "kind": "gpio_out_pp"
+    },
+    {
+     "val": 2,
+     "name": "P1D5o",
+     "kind": "gpio_out_od"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "Y5",
+   "share": {
+    "page": 16,
+    "offset": 1,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P1D1i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "P1D1o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "AUX_N1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  },
+  {
+   "ball": "Y6",
+   "share": {
+    "page": 16,
+    "offset": 0,
+    "mask": 7,
+    "shift": 0
+   },
+   "default": 3,
+   "domain": "AUX_DP",
+   "funcs": [
+    {
+     "val": 0,
+     "name": "P1D0i",
+     "kind": "gpio_in"
+    },
+    {
+     "val": 1,
+     "name": "reserved",
+     "kind": "reserved"
+    },
+    {
+     "val": 2,
+     "name": "P1D0o",
+     "kind": "gpio_out_od"
+    },
+    {
+     "val": 3,
+     "name": "AUX_P1",
+     "kind": "periph"
+    }
+   ],
+   "gpio": null,
+   "danger": false,
+   "danger_reason": ""
+  }
+ ]
+}
