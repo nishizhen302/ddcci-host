@@ -5,7 +5,7 @@
 - 选脚 → 切复用功能（GPIO / I²C / 其他外设）
 - GPIO 模式下：设输入/输出、置 1 / 置 0、读回电平
 - 一键还原本板默认值
-- 按"所属域"固定分组 + 按球名/功能搜索
+- 按"所属域"固定分组 + 按管脚号/功能搜索
 - 危险脚标红，改动时弹二次确认
 
 底层走现有 DDC/CI peek/poke（VCP `0xE5`/`0xE6`）+ `RegAccess`，**固件无需为本功能改动**（但板上需已烧带 `_DEBUG_PHY_TUNE_SUPPORT`、即支持 0xE5/0xE6 的调试固件，且 DDC/CI 为标准 0x6E 模式——与 phytune 同一前提）。
@@ -19,13 +19,13 @@
 
 ## 换板 / 换 PCB
 
-管脚表 `phytune/rl6410_pins.json` 由 generator 从固件头生成。换板后重跑一次：
+管脚表 `phytune/rl6432_pins.json` 由 generator 从固件头生成。换板后重跑一次：
 
 ```
 py -3 -m tools.gen_pins
 ```
 
-默认读 codex 现役 RL6410 树（`tools/gen_pins.py` 顶部 `_FW` 路径）；本机路径不同时显式传：
+默认读 RL6432 2785_A2 216脚树（`tools/gen_pins.py` 顶部 `_FW` 路径，本板 PCB=`RL6432_2785_A2_216PIN_1A2H1DP1DVI_LVDS`）；本机路径不同时显式传：
 `py -3 -m tools.gen_pins --example <PINSHARE> --demod <DEMO_x PINSHARE> --mcu <McuCommonInclude.h>`
 
 数据来源：

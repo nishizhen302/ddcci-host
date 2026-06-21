@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""管脚表 generator: 解析固件 PINSHARE×2 + McuCommon -> phytune/rl6410_pins.json。
+"""管脚表 generator: 解析固件 PINSHARE×2 + McuCommon -> phytune/rl6432_pins.json。
 
 换板/换 PCB 只需改输入路径重跑。纯文本解析, 不依赖固件能编译。
 """
@@ -170,12 +170,12 @@ def build(example_text, demod_text, mcu_text):
     return {"domain_order": DOMAIN_ORDER, "pins": pins}
 
 
-_FW = r"C:\Users\61093\Desktop\monitor firmware - codex\New STD Code II 1P SVN2860"
-_DEF_EXAMPLE = _FW + r"\Pcb\RL6410\BGA_1024\RL6410_PCB_EXAMPLE_PINSHARE.h"
-_DEF_DEMOD = _FW + r"\Pcb\RL6410\BGA_1024\RL6410_DEMO_D_1A4MHL1DP1mDP_DPTX_LVDS_VB1_PINSHARE.h"
-_DEF_MCU = _FW + r"\Kernel\Scaler\RL6410_Series_Scaler\Header\RL6410_Series_McuCommonInclude.h"
+_FW = r"C:\Users\61093\Desktop\monitor firmware\New STD Code II 1P SVN2860"
+_DEF_EXAMPLE = _FW + r"\Pcb\RL6432\LQFP_216\RL6432_PCB_EXAMPLE_216_PIN_PINSHARE.h"
+_DEF_DEMOD = _FW + r"\Pcb\RL6432\LQFP_216\RL6432_2785_A2_216PIN_1A2H1DP1DVI_LVDS_PINSHARE.h"
+_DEF_MCU = _FW + r"\Kernel\Scaler\RL6432_Series_Scaler\Header\RL6432_Series_McuCommonInclude.h"
 _DEF_OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                        "phytune", "rl6410_pins.json")
+                        "phytune", "rl6432_pins.json")
 
 
 def _read(path):

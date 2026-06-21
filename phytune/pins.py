@@ -9,7 +9,7 @@
 import json
 import os
 
-_DEFAULT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rl6410_pins.json")
+_DEFAULT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rl6432_pins.json")
 
 GPIO_IN = "gpio_in"
 GPIO_OUT_PP = "gpio_out_pp"
