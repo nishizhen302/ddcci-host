@@ -117,6 +117,19 @@ class _SP_DID(ctypes.Structure):
 def _find_device_path():
     """按 RTUsb GUID 用 SetupAPI 实时枚举设备路径 (免硬编码)。找不到返回 None。"""
     setupapi = ctypes.WinDLL("setupapi")
+    # ★必须声明 restype/argtypes: 64 位下 HDEVINFO 句柄是 8 字节指针, 不声明会被 ctypes
+    # 当 32 位 int 截断 → 后续枚举全失败 → 误报"设备未找到"(32 位 Python 侥幸不暴露)。
+    setupapi.SetupDiGetClassDevsW.restype = wintypes.HANDLE
+    setupapi.SetupDiGetClassDevsW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR,
+                                              wintypes.HWND, wintypes.DWORD]
+    setupapi.SetupDiEnumDeviceInterfaces.restype = wintypes.BOOL
+    setupapi.SetupDiEnumDeviceInterfaces.argtypes = [wintypes.HANDLE, ctypes.c_void_p,
+                                                     ctypes.c_void_p, wintypes.DWORD,
+                                                     ctypes.c_void_p]
+    setupapi.SetupDiGetDeviceInterfaceDetailW.restype = wintypes.BOOL
+    setupapi.SetupDiGetDeviceInterfaceDetailW.argtypes = [wintypes.HANDLE, ctypes.c_void_p,
+                                                          ctypes.c_void_p, wintypes.DWORD,
+                                                          ctypes.c_void_p, ctypes.c_void_p]
     g = _GUID(_RTUSB_GUID[0], _RTUSB_GUID[1], _RTUSB_GUID[2],
               (ctypes.c_ubyte * 8)(*_RTUSB_GUID[3]))
     h = setupapi.SetupDiGetClassDevsW(ctypes.byref(g), None, None, 0x12)  # PRESENT|DEVICEINTERFACE
@@ -154,6 +167,13 @@ class RawUsbBackend(Backend):
         self._k32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
                                           ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD,
                                           wintypes.HANDLE]
+        # 同理声明读写/关闭, 64 位下句柄按指针传, 别被截断。
+        _pdw = ctypes.POINTER(wintypes.DWORD)
+        self._k32.WriteFile.restype = wintypes.BOOL
+        self._k32.WriteFile.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD, _pdw, ctypes.c_void_p]
+        self._k32.ReadFile.restype = wintypes.BOOL
+        self._k32.ReadFile.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD, _pdw, ctypes.c_void_p]
+        self._k32.CloseHandle.argtypes = [wintypes.HANDLE]
         self._h = self._k32.CreateFileW(path, 0x80000000 | 0x40000000, 3, None, 3, 0, None)
         if self._h in (None, 0, wintypes.HANDLE(-1).value):
             raise RuntimeError("打开 USB 小板失败 err=%d" % ctypes.get_last_error())
