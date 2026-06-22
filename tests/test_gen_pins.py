@@ -61,6 +61,21 @@ def test_parse_pinshare_single_bit_field():
     assert s == {"page": 0x11, "offset": 0x05, "mask": 0x40, "shift": 6}
 
 
+def test_parse_pinshare_ddc_4bit_mask():
+    # DDC/I²C 脚: 注释误标 [2:0] 但固件实际用 & 0x0F, 默认值 8 需 bit3.
+    # 掩码须取字面 0x0F (而非按注释位宽算成 0x07), 否则 mux 值 8 会被读/写截成 0,
+    # 切复用即时失效 (实机 DDC 危险脚回归点)。
+    text = """
+#define _PIN_DDC                   (8 & 0x0F) // Page 10-0x3C[2:0]
+// 0 ~ 8 (0: P9D4i<I>, 2: P9D4o<OD>, 8: DDCSCL2)
+"""
+    p = G.parse_pinshare(text)["DDC"]
+    assert p["default"] == 8
+    assert p["share"]["mask"] == 0x0F
+    assert p["share"]["shift"] == 0
+    assert any(f["val"] == 8 and f["name"] == "DDCSCL2" for f in p["funcs"])
+
+
 def test_parse_pinshare_sorts_funcs_by_val():
     # 注释里乱序列出, funcs 应按 val 升序
     text = """

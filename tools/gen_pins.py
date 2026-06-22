@@ -78,13 +78,15 @@ def parse_pinshare(text):
         if not m:
             i += 1
             continue
-        ball, dflt, _maskhex, pg, off, hi, lo = m.groups()
+        ball, dflt, maskhex, pg, off, hi, lo = m.groups()
         # 位域 [hi:lo] 或单 bit [n]; 用 min/max 兼容偶发反写 [lo:hi], 不至于负位移崩溃
         a = int(hi)
         b = int(lo) if lo is not None else a
         shift = min(a, b)
-        width = abs(a - b) + 1
-        mask = ((1 << width) - 1) << shift
+        # 掩码以固件实际写掩码 (& 0xNN, 已定位) 为准, 而非注释 [hi:lo] 位宽:
+        # 本系 PINSHARE 对 DDC/I²C 脚注释误标 [2:0], 但字段实为 4bit(默认值 8 需 bit3),
+        # 固件统一用 & 0x0F 写回; 若信注释会把 mux 值 8 读/写截成 0, DDC 脚切复用失效.
+        mask = int(maskhex, 16)
         j = i + 1
         comment = []
         while j < len(lines) and lines[j].lstrip().startswith("//"):
