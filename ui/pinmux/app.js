@@ -31,10 +31,26 @@ function setConn(state){
   const d=el("conn-dot"); d.className="dot"+(state?(" "+state):"");
 }
 
+function setBackendBadge(name, err){
+  const b=el("bk"); if(!b) return;
+  const addr = (name && name.toLowerCase()==="rawusb") ? "USB小板" : (name||"?");
+  b.textContent = err ? ("✕ "+addr) : addr;
+  b.className = "bk" + (err?" err":(name==="rawusb"?" rawusb":""));
+  b.title = err || ("后端 = "+(name||"?"));
+}
 async function pickBoard(){
   const r=await api().list_monitors();
   const sel=el("mon"); sel.innerHTML="";
-  if(!r.ok){ setConn("err"); return; }
+  if(!r.ok){
+    setConn("err");
+    setBackendBadge(r.backend, r.error||"未连接");
+    el("detail").innerHTML="<div class='empty' style='padding:14px;line-height:1.7'>"
+      +"<b style='color:var(--danger)'>● 未连接</b><br>"
+      +"后端 = <b>"+(r.backend||"?")+"</b><br>"
+      +"<span class='note'>"+(r.error||"未枚举到显示器")+"</span><br>"
+      +"<span class='note'>走 USB 小板请用「管脚配置-USB小板.bat」启动, 后端应显示 rawusb。</span></div>";
+    return;
+  }
   r.monitors.forEach(m=>{
     const o=document.createElement("option");
     o.value=m.id; o.textContent=`[${m.id}] ${m.model||m.description||""}`;
@@ -43,6 +59,7 @@ async function pickBoard(){
   MON = (r.default!=null)? r.default : (r.monitors[0]&&r.monitors[0].id);
   sel.value=MON;
   setConn(MON!=null?"on":"err");
+  setBackendBadge(r.backend, MON==null?"未选到显示器":null);
 }
 
 async function loadPins(){

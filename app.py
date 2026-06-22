@@ -268,7 +268,9 @@ class Api:
             return {"ok": True, "monitors": out, "default": default_id,
                     "backend": self._backend_name, "address": be.address}
         except Exception as e:  # 桥接层兜底, 任何后端异常都翻译
-            return _err(e)
+            err = _err(e)
+            err["backend"] = self._backend_name   # 让前端能显示是哪个后端在报错
+            return err
 
     def get_caps(self, mon_id):
         try:
@@ -587,7 +589,9 @@ class Api:
 
 def main():
     # 后端可经 DDCCI_BACKEND 选: dxva2(默认, 视频通道) / rawusb(USB 小板旁路 I²C)。
-    api = Api(backend_name=os.environ.get("DDCCI_BACKEND", "dxva2"))
+    backend_name = os.environ.get("DDCCI_BACKEND", "dxva2")
+    sys.stderr.write("[pinmux] backend = %s\n" % backend_name)
+    api = Api(backend_name=backend_name)
     if os.environ.get("DDCCI_PINMUX"):
         page = "pinmux/index.html"
     elif os.environ.get("DDCCI_PHYTUNE"):

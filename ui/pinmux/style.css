@@ -12,6 +12,9 @@ body{ font-family:-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--text);
 .pbar{ height:40px; flex:none; display:flex; align-items:center; gap:8px;
   padding:0 10px; background:var(--surface); border-bottom:1px solid var(--line); }
 .pbar .title{ font-weight:600; color:#5b6470; }
+.bk{ font-size:11px; padding:1px 6px; border-radius:6px; background:var(--line); color:#5b6470; white-space:nowrap; }
+.bk.rawusb{ background:#e3f0ff; color:#1f6feb; }
+.bk.err{ background:#ffe3e3; color:var(--danger); }
 .dot{ width:8px; height:8px; border-radius:50%; background:#cbd2da; }
 .dot.on{ background:var(--ok); } .dot.err{ background:var(--danger); }
 .grow{ flex:1; }
