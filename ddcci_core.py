@@ -8,10 +8,14 @@ import re
 
 from backends.base import Backend, Monitor
 from backends.dxva2_backend import Dxva2Backend
+from backends.raw_usb_backend import RawUsbBackend
 
-# 后端注册表。Backend B (硬件调试器/低层 I2C) 落地后在此登记即可。
+# 后端注册表。
+# - dxva2  = Backend A: Windows 标准 DDC/CI, 借显卡视频通道, 依赖面板活动。
+# - rawusb = Backend B: Realtek USB ISP 小板裸 USB 管道, 旁路 I²C, 不依赖面板开着。
 _BACKENDS = {
     "dxva2": Dxva2Backend,
+    "rawusb": RawUsbBackend,
 }
 
 

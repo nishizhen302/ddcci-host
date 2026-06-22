@@ -586,7 +586,8 @@ class Api:
 
 
 def main():
-    api = Api()
+    # 后端可经 DDCCI_BACKEND 选: dxva2(默认, 视频通道) / rawusb(USB 小板旁路 I²C)。
+    api = Api(backend_name=os.environ.get("DDCCI_BACKEND", "dxva2"))
     if os.environ.get("DDCCI_PINMUX"):
         page = "pinmux/index.html"
     elif os.environ.get("DDCCI_PHYTUNE"):
