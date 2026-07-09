@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nanwei Control Preview</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="light">
+  <main class="shell" aria-label="Nanwei DDCCI 控制台预览">
+    <header class="titlebar">
+      <div class="brand">
+        <span class="status-dot"></span>
+        <div>
+          <strong>Nanwei Control</strong>
+          <span>DDCCI / IIC Utility</span>
+        </div>
+      </div>
+      <div class="title-actions">
+        <button class="icon-btn" type="button" aria-label="刷新">↻</button>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="切换皮肤">
+          <span>Light</span>
+          <i></i>
+          <span>Dark</span>
+        </button>
+        <button class="icon-btn ghost" type="button" aria-label="最小化">−</button>
+        <button class="icon-btn close" type="button" aria-label="关闭">×</button>
+      </div>
+    </header>
+
+    <section class="connect-strip" aria-label="连接信息">
+      <details class="target-picker">
+        <summary>
+          <span class="eyebrow">当前目标</span>
+          <strong id="target-name">USB 小板 · Realtek USB ISP · 0x5E</strong>
+        </summary>
+        <div class="target-menu" role="listbox" aria-label="选择控制路径">
+          <button class="target-option active" type="button" data-backend="rawusb" data-address="0x5E" data-name="USB 小板 · Realtek USB ISP · 0x5E">
+            <span>
+              <b>自动推荐</b>
+              <small>USB 小板 · Realtek USB ISP · 0x5E</small>
+            </span>
+            <em>稳</em>
+          </button>
+          <button class="target-option" type="button" data-backend="gpu" data-address="0x5E" data-name="GPU · NVIDIA display #0 · 0x5E">
+            <span>
+              <b>显卡通道</b>
+              <small>GPU · NVIDIA display #0 · 0x5E</small>
+            </span>
+            <em>直连</em>
+          </button>
+          <button class="target-option" type="button" data-backend="gpu" data-address="0x6E" data-name="GPU · NVIDIA display #1 · 0x6E">
+            <span>
+              <b>标准地址样机</b>
+              <small>GPU · NVIDIA display #1 · 0x6E</small>
+            </span>
+            <em>备用</em>
+          </button>
+          <p>检测到 USB 与 GPU 可能指向同一台显示器时，默认优先使用 USB 小板。</p>
+        </div>
+      </details>
+      <div class="chip-row">
+        <span class="chip" id="backend-chip">rawusb</span>
+        <span class="chip soft" id="addr-chip">addr 0x5E</span>
+        <span class="chip soft">HW v12 · SW v31</span>
+      </div>
+    </section>
+
+    <section class="panel remote" aria-label="模拟按键">
+      <div class="section-head">
+        <span>模拟按键</span>
+        <b>OSD Keys</b>
+      </div>
+      <div class="key-grid">
+        <button type="button">MENU</button>
+        <button type="button">LEFT</button>
+        <button type="button">RIGHT</button>
+        <button type="button">EXIT</button>
+      </div>
+    </section>
+
+    <details class="more-drawer">
+      <summary>
+        <span>更多设置</span>
+        <b>Image / Color / Logs</b>
+      </summary>
+
+      <div class="more-body">
+        <details class="panel accordion primary" aria-label="图像控制">
+          <summary class="section-head">
+            <span>图像</span>
+            <b>Image</b>
+          </summary>
+
+          <div class="accordion-body">
+            <article class="control-row">
+              <div class="control-copy">
+                <span>亮度</span>
+                <strong>Brightness</strong>
+              </div>
+              <button class="step" type="button" data-step="-1" data-target="brightness">−</button>
+              <label class="meter">
+                <input id="brightness" type="range" min="0" max="100" value="64">
+                <span style="--value:64%"></span>
+              </label>
+              <output id="brightness-out" class="value">64</output>
+              <button class="step" type="button" data-step="1" data-target="brightness">+</button>
+            </article>
+
+            <article class="control-row">
+              <div class="control-copy">
+                <span>对比度</span>
+                <strong>Contrast</strong>
+              </div>
+              <button class="step" type="button" data-step="-1" data-target="contrast">−</button>
+              <label class="meter">
+                <input id="contrast" type="range" min="0" max="100" value="72">
+                <span style="--value:72%"></span>
+              </label>
+              <output id="contrast-out" class="value">72</output>
+              <button class="step" type="button" data-step="1" data-target="contrast">+</button>
+            </article>
+          </div>
+        </details>
+
+        <details class="panel accordion settings" aria-label="色彩与 Gamma">
+          <summary class="section-head">
+            <span>色彩</span>
+            <b>Color / Gamma</b>
+          </summary>
+
+          <div class="accordion-body">
+            <div class="setting">
+              <div>
+                <span>色温</span>
+                <strong>Color Temp</strong>
+              </div>
+              <div class="seg">
+                <button type="button">6500K</button>
+                <button class="active" type="button">9300K</button>
+                <button type="button">User</button>
+              </div>
+            </div>
+
+            <div class="setting">
+              <div>
+                <span>Gamma</span>
+                <strong>Curve</strong>
+              </div>
+              <div class="seg gamma">
+                <button type="button">γ1</button>
+                <button type="button">γ2</button>
+                <button class="active" type="button">γ3</button>
+                <button type="button">γ4</button>
+                <button type="button">γ5</button>
+                <button type="button">γ6</button>
+                <button type="button">γ7</button>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="log-drawer">
+          <summary>
+            <span>命令日志</span>
+            <b>Raw Frames</b>
+          </summary>
+          <div class="log-list">
+            <p><time>21:42:11</time><span>读亮度</span><code>5E 51 82 01 10 9C</code></p>
+            <p><time>21:42:09</time><span>写色温</span><code>5E 51 84 03 14 00 06 9A</code></p>
+            <p><time>21:42:04</time><span>建链</span><code>rawusb · 0x5E · ok</code></p>
+          </div>
+        </details>
+      </div>
+    </details>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

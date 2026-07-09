@@ -13,7 +13,7 @@ import sys
 
 import webview
 
-import winchrome  # 无边框窗口样式/缩放 (从 app.py 抽出, 不再 import app -> 不拉 phytune)
+import winchrome  # 共享无边框窗口样式/缩放机制, 避免拉入其它界面依赖
 from ddcci_core import select_backend
 import nanwei_core as nw
 from backends.raw_usb_backend import get_vcp_payload, set_vcp_payload
@@ -45,6 +45,73 @@ class Api:
         return self._dev
 
     # ---- 连接 / 选显示器 ----
+    def discover_targets(self):
+        """扫描可用控制路径。地址 0x5E/0x6E 自动探测, UI 只选择路径。"""
+        targets = []
+        errors = []
+        backends = [self._backend_name]
+        for name in ("rawusb", "gpu"):
+            if name not in backends:
+                backends.append(name)
+        for name in backends:
+            for slave in (0x5E, 0x6E):
+                be = None
+                try:
+                    be = select_backend(name, slave=slave)
+                    mons = be.enum_monitors()
+                    live = []
+                    for m in mons:
+                        probe = be.get_vcp(m.id, nw.OP_BRIGHTNESS)
+                        if probe is not None:
+                            live.append(m)
+                    for m in live:
+                        tid = "%s:0x%02X:%s" % (name, slave, m.id)
+                        targets.append({
+                            "id": tid,
+                            "backend": name,
+                            "address": "0x%02X" % slave,
+                            "mon_id": m.id,
+                            "description": m.description,
+                            "recommended": name == "rawusb",
+                        })
+                except Exception as e:
+                    errors.append("%s 0x%02X: %s" % (name, slave, str(e) or e.__class__.__name__))
+                finally:
+                    if be is not None:
+                        try:
+                            be.close()
+                        except Exception:
+                            pass
+        targets.sort(key=lambda t: (0 if t["recommended"] else 1, t["backend"], t["address"], t["mon_id"]))
+        return {"ok": True, "targets": targets, "errors": errors}
+
+    def connect_target(self, target):
+        """按 discover_targets 返回的路径建链并选中显示器。"""
+        try:
+            if self._be is not None:
+                self._be.close()
+            self._be = None
+            self._dev = None
+            backend_name = str(target.get("backend") or self._backend_name)
+            slave = int(str(target.get("address") or "0x5E"), 0)
+            mon_id = int(target.get("mon_id", 0))
+            self._backend_name = backend_name
+            self._be = select_backend(backend_name, slave=slave)
+            mons = self._be.enum_monitors()
+            if not mons:
+                raise RuntimeError("后端 %s 没枚举到显示器" % backend_name)
+            self._dev = nw.NanweiMonitor(self._be, mon_id)
+            versions = self._dev.versions()
+            desc = next((m.description for m in mons if m.id == mon_id), mons[0].description)
+            return {"ok": True, "backend": backend_name, "address": "0x%02X" % self._be.address,
+                    "mon_id": mon_id, "description": desc, "versions": versions}
+        except Exception as e:
+            self._be = None
+            self._dev = None
+            err = _err(e)
+            err["backend"] = self._backend_name
+            return err
+
     def connect(self, slave=None):
         """(重新)建链并枚举显示器。slave = '0x5E'/'0x6E'/None(用环境变量或默认)。"""
         try:
@@ -151,12 +218,22 @@ def main():
         WIN_TITLE,
         os.path.join(HERE, "ui", "nanwei", "index.html"),
         js_api=api,
-        width=500, height=820, min_size=(460, 620),
+        width=580, height=520, min_size=(500, 360),
         background_color="#0a0a0b",
         frameless=True, easy_drag=False,
     )
     func = None if os.environ.get("DDCCI_NOSTYLE") else winchrome.style_native_window
-    webview.start(func, debug="--debug" in sys.argv)
+    # Win11 build: leave GUI auto-detection to pywebview so it uses Edge/WebView2.
+    # Set DDCCI_GUI=qt only for a local compatibility experiment.
+    gui = os.environ.get("DDCCI_GUI") or None
+    if gui == "qt":
+        try:
+            from qtpy.QtCore import Qt, QCoreApplication
+            QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+            QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+        except Exception:
+            pass
+    webview.start(func, gui=gui, debug="--debug" in sys.argv)
 
 
 if __name__ == "__main__":

@@ -1,351 +1,306 @@
-// DDCCI 控制台前端 —— 南微协议固定控件, 视觉复用 ddcci 控制台样式。
-// 值表/操作码由后端 protocol_meta() 下发, 单一数据源在 nanwei_core.py。
-// 建链流程: connect(地址) -> 枚举显示器进下拉框 -> select_monitor -> 渲染控件。
+// 南微 DDCCI 控制台前端。
+// 设计目标: 默认像一个小遥控器; 图像、色彩和日志收在更多设置里。
 
-const $ = (s) => document.querySelector(s);
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
-const I = {
-  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
-  contrast: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor" stroke="none"/>',
-  thermo: '<path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z"/>',
-  gamma: '<path d="M3 20c4-12 14-12 18 0"/>',
-  usb: '<path d="M12 2v14M12 22a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 6l3-3M12 9l-4-2"/><circle cx="17" cy="5" r="1.6"/><rect x="6.8" y="6" width="2.6" height="2.6"/>',
-  chipv: '<rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/>',
+let META = null;
+let TARGETS = [];
+let CURRENT_TARGET = null;
+let refreshing = false;
+
+const DEMO_META = {
+  ok: true,
+  colortemp: [
+    { label: "6500K", value: 0x08 },
+    { label: "9300K", value: 0x06 },
+    { label: "User", value: 0x05 },
+  ],
+  gamma: Array.from({ length: 7 }, (_, i) => ({ label: `γ${i + 1}`, value: 0x06 + i })),
+  ops: { brightness: 0x10, contrast: 0x12, colortemp: 0x14, gamma: 0x72 },
 };
-const icon = (inner, cls) => `<svg class="i ${cls || ""}" viewBox="0 0 24 24">${inner}</svg>`;
 
-let META = null;      // protocol_meta() 结果
-let MONITORS = [];    // connect() 枚举结果
-let CURID = null;     // 当前选中显示器 id
+const demoBridge = {
+  _values: { 0x10: [64, 100], 0x12: [72, 100], 0x14: [0x06, 0x0d], 0x72: [0x08, 0x0c] },
+  async discover_targets() {
+    return {
+      ok: true,
+      targets: [
+        { id: "rawusb:0x5E:0", backend: "rawusb", address: "0x5E", mon_id: 0,
+          description: "Realtek USB ISP", recommended: true },
+        { id: "gpu:0x5E:0", backend: "gpu", address: "0x5E", mon_id: 0,
+          description: "NVIDIA display #0", recommended: false },
+        { id: "gpu:0x6E:1", backend: "gpu", address: "0x6E", mon_id: 1,
+          description: "NVIDIA display #1", recommended: false },
+      ],
+      errors: [],
+    };
+  },
+  async connect_target(target) {
+    return { ok: true, backend: target.backend, address: target.address, mon_id: target.mon_id,
+      description: target.description, versions: { hw: 12, sw: 31 } };
+  },
+  async protocol_meta() { return DEMO_META; },
+  async get_param(op) {
+    const value = this._values[Number(op)] || [0, 100];
+    return { ok: true, current: value[0], maximum: value[1], tx: `5E 51 82 01 ${hex(op)} --` };
+  },
+  async set_param(op, value) {
+    const cur = this._values[Number(op)] || [0, 100];
+    cur[0] = Number(value);
+    this._values[Number(op)] = cur;
+    return { ok: true, tx: `5E 51 84 03 ${hex(op)} 00 ${hex(value)} --` };
+  },
+  async press_key(name) { return { ok: true, tx: `5E 51 84 C0 96 ${name} 00 --` }; },
+  async minimize_window() { return { ok: true }; },
+  async close_window() { return { ok: true }; },
+  async start_resize() { return { ok: true }; },
+};
 
-function setConn(text, state) {
+function bridge() {
+  return (window.pywebview && window.pywebview.api) || demoBridge;
+}
+
+function hex(value) {
+  return Number(value).toString(16).padStart(2, "0").toUpperCase();
+}
+
+function setConn(text, state = "idle") {
   $("#conn").textContent = text;
-  $("#pulse").dataset.state = state || "idle";
+  $("#pulse").dataset.state = state;
 }
 
-// ---- 地址选择 (0x5E 南微文档值 / 0x6E 样机实测值), 记住上次选择 ----
-function savedAddr() {
-  try { return localStorage.getItem("ddcci-slave") || "0x5E"; } catch (e) { return "0x5E"; }
-}
-function saveAddr(a) {
-  try { localStorage.setItem("ddcci-slave", a); } catch (e) {}
-}
-function paintAddrSeg(addr) {
-  document.querySelectorAll("#addr-seg span").forEach((s) => {
-    s.classList.toggle("on", s.dataset.addr.toUpperCase() === String(addr).toUpperCase());
-  });
-}
-
-// ---- 命令日志 (新的在上, 只留 80 条) ----
-function log(label, tx, ok, extra) {
+function log(label, tx, ok = true, extra = "") {
   const box = $("#log");
-  const row = document.createElement("div");
-  row.className = "log-row";
-  const t = new Date().toTimeString().slice(0, 8);
+  const row = document.createElement("p");
+  const time = new Date().toTimeString().slice(0, 8);
   row.innerHTML =
-    `<span class="t tn">${t}</span>` +
-    `<span class="${ok ? "r-ok" : "r-err"}">${label}${extra ? " " + extra : ""}</span>` +
-    `<span class="frame">${tx || ""}</span>`;
+    `<time>${time}</time><span class="${ok ? "ok" : "err"}">${label}${extra ? " " + extra : ""}</span>` +
+    `<code>${tx || ""}</code>`;
   box.prepend(row);
   while (box.children.length > 80) box.removeChild(box.lastChild);
 }
 
-const api = {
-  get: async (op, label) => {
-    const r = await window.pywebview.api.get_param(op);
-    log(`读${label}`, r.tx, r.ok, r.ok ? `→ ${r.current}/${r.maximum}` : `✕ ${r.error || ""}`);
-    return r;
-  },
-  set: async (op, v, label) => {
-    const r = await window.pywebview.api.set_param(op, v);
-    log(`写${label}=${v}`, r.tx, r.ok, r.ok ? "" : `✕ ${r.error || ""}`);
-    return r;
-  },
-};
-
-// =================== 控件 (骨架同 ddcci 控制台) ===================
-
-function grpShell(name, iconInner) {
-  const grp = document.createElement("div");
-  grp.className = "grp";
-  const head = document.createElement("div");
-  head.className = "ghead";
-  head.innerHTML = `${icon(iconInner, "gi")}<span class="lbl">${name}</span>`;
-  const badge = document.createElement("span");
-  badge.className = "badge";
-  const val = document.createElement("span");
-  val.className = "val";
-  head.append(badge, val);
-  grp.appendChild(head);
-  grp._badge = badge; grp._val = val;
-  return grp;
+function applyTheme(theme) {
+  const next = theme === "dark" ? "dark" : "light";
+  document.body.dataset.theme = next;
+  try { localStorage.setItem("nanwei-theme", next); } catch (e) {}
 }
-function unresponsive(grp) { grp.dataset.unresponsive = "1"; grp._badge.textContent = "未响应"; }
 
-// 亮度/对比度: −/数字/+ 加滑块。USB 链路每条命令有 settle, 拖动节流放宽到 180ms。
-async function buildSlider(op, name, iconInner) {
-  const grp = grpShell(name, iconInner);
-  const init = await api.get(op, name);
+function initTheme() {
+  let theme = "light";
+  try { theme = localStorage.getItem("nanwei-theme") || "light"; } catch (e) {}
+  applyTheme(theme);
+}
 
-  const minus = document.createElement("button"); minus.textContent = "−";
-  const plus = document.createElement("button"); plus.textContent = "+";
-  const pmL = document.createElement("div"); pmL.className = "pm"; pmL.appendChild(minus);
-  const pmR = document.createElement("div"); pmR.className = "pm"; pmR.appendChild(plus);
-  const num = document.createElement("input");
-  num.type = "number"; num.className = "num tn";
-  grp._val.append(pmL, num, pmR);
+function setTargetSummary(target, state) {
+  CURRENT_TARGET = target;
+  const name = target
+    ? `${target.backend === "rawusb" ? "USB 小板" : "GPU"} · ${target.description} · ${target.address}`
+    : "未发现可用目标";
+  $("#target-name").textContent = name;
+  $("#backend-chip").textContent = target ? target.backend : "none";
+  $("#addr-chip").textContent = target ? `addr ${target.address}` : "addr --";
+  const versions = state && state.versions;
+  $("#version-chip").textContent = versions
+    ? `HW v${versions.hw == null ? "--" : versions.hw} · SW v${versions.sw == null ? "--" : versions.sw}`
+    : "HW v-- · SW v--";
+}
 
-  if (!init.ok) {
-    unresponsive(grp);
-    num.value = ""; num.disabled = minus.disabled = plus.disabled = true;
-    const note = document.createElement("div"); note.className = "empty"; note.textContent = "读不到当前值/范围";
-    grp.appendChild(note);
-    return grp;
-  }
-  const max = init.maximum || 100;
-  num.min = 0; num.max = max;
-
-  const sld = document.createElement("div"); sld.className = "sld";
-  const fill = document.createElement("div"); fill.className = "f";
-  const knob = document.createElement("div"); knob.className = "k";
-  sld.append(fill, knob);
-  grp.appendChild(sld);
-
-  function paint(v) {
-    const pct = max ? (v / max) * 100 : 0;
-    fill.style.width = pct + "%"; knob.style.left = pct + "%"; num.value = v;
-  }
-  async function apply(v) {
-    v = Math.max(0, Math.min(max, Math.round(v)));
-    paint(v);
-    const r = await api.set(op, v, name);
-    if (!r.ok) { setConn(`${name} 设置失败: ${r.error}`, "warn"); return; }
-    const rb = await api.get(op, name);
-    if (rb.ok) paint(rb.current);
-    setConn("已连接", "ok");
-  }
-  paint(init.current);
-
-  num.addEventListener("change", () => apply(Number(num.value)));
-  minus.addEventListener("click", () => apply(Number(num.value) - 1));
-  plus.addEventListener("click", () => apply(Number(num.value) + 1));
-
-  let dragging = false, lastSent = 0;
-  const ratioToV = (clientX) => {
-    const r = sld.getBoundingClientRect();
-    return Math.round(Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * max);
-  };
-  function liveSet(v) {
-    paint(v);
-    const now = Date.now();
-    if (now - lastSent >= 180) { lastSent = now; api.set(op, v, name); }
-  }
-  sld.addEventListener("pointerdown", (e) => {
-    dragging = true; sld.setPointerCapture(e.pointerId); liveSet(ratioToV(e.clientX));
+function renderTargetMenu(targets) {
+  const menu = $("#target-menu");
+  menu.innerHTML = "";
+  targets.forEach((target, index) => {
+    const button = document.createElement("button");
+    button.className = `target-option${index === 0 ? " active" : ""}`;
+    button.type = "button";
+    button.dataset.id = target.id;
+    button.innerHTML =
+      `<span><b>${target.recommended ? "自动推荐" : target.backend === "gpu" ? "显卡通道" : "控制路径"}</b>` +
+      `<small>${target.backend} · ${target.description} · ${target.address}</small></span>` +
+      `<em>${target.recommended ? "稳" : "可选"}</em>`;
+    button.addEventListener("click", () => selectTarget(target.id));
+    menu.appendChild(button);
   });
-  sld.addEventListener("pointermove", (e) => { if (dragging) liveSet(ratioToV(e.clientX)); });
-  sld.addEventListener("pointerup", (e) => {
-    if (!dragging) return; dragging = false; apply(ratioToV(e.clientX));
-  });
-  return grp;
+  const hint = document.createElement("p");
+  hint.textContent = "地址 0x5E / 0x6E 自动探测。检测到 USB 与 GPU 可能指向同一台显示器时, 默认优先使用 USB 小板。";
+  menu.appendChild(hint);
 }
 
-// 色温 / Gamma: 离散分段按钮, 写后回读确认
-async function buildSeg(op, name, iconInner, options, extraCls) {
-  const grp = grpShell(name, iconInner);
-  const seg = document.createElement("div");
-  seg.className = "seg" + (extraCls ? " " + extraCls : "");
-  const spans = new Map();
-  options.forEach((o) => {
-    const s = document.createElement("span");
-    s.textContent = o.label;
-    s.addEventListener("click", async () => {
-      setSel(o.value);
-      const r = await api.set(op, o.value, name);
-      if (!r.ok) { setConn(`${name} 设置失败: ${r.error}`, "warn"); return; }
-      const rb = await api.get(op, name);
-      setSel(rb.ok ? rb.current : o.value);
-      setConn("已连接", "ok");
-    });
-    spans.set(o.value, s); seg.appendChild(s);
-  });
-  grp.appendChild(seg);
-
-  function setSel(v) {
-    spans.forEach((s, val) => s.classList.toggle("on", val === v));
-    const o = options.find((x) => x.value === v);
-    grp._val.innerHTML = `<span class="vtxt tn">${o ? o.label : "0x" + Number(v).toString(16).toUpperCase()}</span>`;
+async function selectTarget(targetId) {
+  const target = TARGETS.find((item) => item.id === targetId) || TARGETS[0];
+  if (!target) return;
+  $$(".target-option").forEach((button) => button.classList.toggle("active", button.dataset.id === target.id));
+  $("#target-picker").open = false;
+  setConn("连接中...", "idle");
+  const result = await bridge().connect_target(target);
+  if (!result.ok) {
+    setConn(`连接失败: ${result.error || ""}`, "warn");
+    log("连接失败", "", false, result.error || "");
+    return;
   }
-
-  const cur = await api.get(op, name);
-  if (cur.ok) setSel(cur.current);
-  else unresponsive(grp);
-  return grp;
-}
-
-// 模拟按键 (协议 0xC0 帧): menu/right/left/exit
-const OSD_KEYS = [
-  { name: "menu",  label: "MENU", sub: "进入·确认", cls: "k-menu" },
-  { name: "left",  label: "◀",    sub: "左 / −",    cls: "k-left" },
-  { name: "right", label: "▶",    sub: "右 / +",    cls: "k-right" },
-  { name: "exit",  label: "EXIT", sub: "退出",      cls: "k-exit" },
-];
-
-function buildOsdKeys() {
-  const wrap = $("#osdkeys");
-  wrap.innerHTML = "";
-  const div = document.createElement("div");
-  div.className = "divtxt"; div.textContent = "模拟按键";
-  wrap.appendChild(div);
-
-  const pad = document.createElement("div");
-  pad.className = "dpad";
-  OSD_KEYS.forEach((key) => {
-    const b = document.createElement("button");
-    b.className = "dkey " + key.cls;
-    b.innerHTML = `<span class="kl">${key.label}</span><span class="ks">${key.sub}</span>`;
-    b.addEventListener("click", async () => {
-      b.classList.add("press");
-      setTimeout(() => b.classList.remove("press"), 170);
-      const r = await window.pywebview.api.press_key(key.name);
-      log(`按键 ${key.label}`, r.tx, r.ok, r.ok ? "" : `✕ ${r.error || ""}`);
-      setConn(r.ok ? "已连接" : `按键失败: ${r.error || ""}`, r.ok ? "ok" : "warn");
-    });
-    pad.appendChild(b);
-  });
-  wrap.appendChild(pad);
-}
-
-// =================== 建链 + 渲染 ===================
-
-function chip(html, cls, id) {
-  const c = document.createElement("span");
-  c.className = "chip" + (cls ? " " + cls : "");
-  if (id) c.id = id;
-  c.innerHTML = html;
-  return c;
-}
-
-function renderMonitorOptions(monitors, keepId) {
-  const sel = $("#monitor-select");
-  sel.innerHTML = "";
-  monitors.forEach((m) => {
-    const opt = document.createElement("option");
-    opt.value = String(m.id);
-    opt.textContent = `[${m.id}] ${m.description}`;
-    sel.appendChild(opt);
-  });
-  if (keepId != null && monitors.some((m) => m.id === keepId)) sel.value = String(keepId);
-}
-
-// 选中一台显示器: 读版本 + 渲染控件
-async function pickMonitor(id) {
-  CURID = id;
-  const m = MONITORS.find((x) => x.id === id) || MONITORS[0];
-  $("#sel-name").textContent = m ? m.description : "—";
-  $("#sel-id").textContent = m ? `[${m.id}]` : "";
-
-  const r = await window.pywebview.api.select_monitor(id);
-  const verChip = $("#chip-ver");
-  if (verChip) {
-    const v = (r.ok && r.versions) || {};
-    const vtxt = (x) => (x == null ? "—" : x);
-    verChip.innerHTML = `${icon(I.chipv, "sm")}硬件 v${vtxt(v.hw)} · 软件 v${vtxt(v.sw)}`;
-  }
-  if (!r.ok) { setConn(`选中失败: ${r.error || ""}`, "warn"); return; }
-
-  const cont = $("#controls"); cont.innerHTML = "";
-  const div = document.createElement("div"); div.className = "divtxt"; div.textContent = "图像";
-  cont.appendChild(div);
-  cont.appendChild(await buildSlider(META.ops.brightness, "亮度", I.sun));
-  cont.appendChild(await buildSlider(META.ops.contrast, "对比度", I.contrast));
-  cont.appendChild(await buildSeg(META.ops.colortemp, "色温", I.thermo, META.colortemp, "tempseg"));
-  cont.appendChild(await buildSeg(META.ops.gamma, "Gamma", I.gamma, META.gamma));
-
-  buildOsdKeys();
+  setTargetSummary(target, result);
   setConn("已连接", "ok");
+  log("切换目标", `${target.backend} · ${target.address} · ${target.description}`, true);
+  await loadParams();
 }
 
-let refreshing = false;
+function syncMeter(input, value, max) {
+  if (typeof max === "number" && max > 0) input.max = String(max);
+  if (typeof value === "number") input.value = String(value);
+  const current = Number(input.value || 0);
+  const maximum = Number(input.max || 100) || 100;
+  const pct = `${Math.max(0, Math.min(100, Math.round((current / maximum) * 100)))}%`;
+  const fill = input.closest(".meter").querySelector("span");
+  const out = $(`#${input.id}-out`);
+  fill.style.setProperty("--value", pct);
+  out.value = Number.isFinite(current) ? current : "--";
+}
+
+async function loadParam(inputId, op) {
+  const input = $(`#${inputId}`);
+  const result = await bridge().get_param(op);
+  if (!result.ok) {
+    syncMeter(input, 0, 100);
+    $(`#${inputId}-out`).value = "--";
+    log(`读${inputId}`, result.tx, false, result.error || "无应答");
+    return;
+  }
+  syncMeter(input, result.current, result.maximum || 100);
+  log(`读${inputId}`, result.tx, true, `→ ${result.current}/${result.maximum}`);
+}
+
+async function loadParams() {
+  if (!META) META = await bridge().protocol_meta();
+  await loadParam("brightness", META.ops.brightness);
+  await loadParam("contrast", META.ops.contrast);
+  await loadDiscrete("colortemp", META.ops.colortemp, META.colortemp);
+  await loadDiscrete("gamma", META.ops.gamma, META.gamma);
+}
+
+async function loadDiscrete(kind, op, options) {
+  const result = await bridge().get_param(op);
+  if (result.ok) {
+    markSeg(kind, result.current);
+    log(`读${kind}`, result.tx, true, `→ ${result.current}/${result.maximum}`);
+  } else {
+    log(`读${kind}`, result.tx, false, result.error || "无应答");
+  }
+}
+
+function markSeg(kind, value) {
+  $$(`#${kind}-seg button`).forEach((button) => {
+    button.classList.toggle("active", Number(button.dataset.value) === Number(value));
+  });
+}
+
+function buildSeg(id, options, op) {
+  const box = $(`#${id}-seg`);
+  box.innerHTML = "";
+  options.forEach((option) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = option.label;
+    button.dataset.value = option.value;
+    button.addEventListener("click", async () => {
+      markSeg(id, option.value);
+      const result = await bridge().set_param(op, option.value);
+      log(`写${id}`, result.tx, result.ok, result.ok ? "" : result.error || "");
+      if (result.ok) await loadDiscrete(id, op, options);
+    });
+    box.appendChild(button);
+  });
+}
+
 async function refresh() {
   if (refreshing) return;
   refreshing = true;
-  const btn = $("#win-refresh");
-  btn.classList.add("spin");
-  const prevId = CURID;
+  $("#win-refresh").classList.add("spin");
   try {
-    setConn("建链中…", "idle");
-    $("#chips").innerHTML = ""; $("#controls").innerHTML = ""; $("#osdkeys").innerHTML = "";
-    $("#sel-name").textContent = "—"; $("#sel-id").textContent = "";
-    paintAddrSeg(savedAddr());
-
-    const st = await window.pywebview.api.connect(savedAddr());
-    if (!st.ok) {
-      setConn(`建链失败 (${st.backend || ""})`, "warn");
-      const p = document.createElement("p"); p.className = "empty";
-      p.textContent = `${st.error || ""}${st.hint ? " — " + st.hint : ""}`;
-      $("#controls").appendChild(p);
-      MONITORS = []; CURID = null;
-      renderMonitorOptions([], null);
+    setConn("扫描中...", "idle");
+    const discovery = await bridge().discover_targets();
+    TARGETS = (discovery && discovery.targets) || [];
+    renderTargetMenu(TARGETS);
+    if (!META) {
+      META = await bridge().protocol_meta();
+      buildSeg("colortemp", META.colortemp, META.ops.colortemp);
+      buildSeg("gamma", META.gamma, META.ops.gamma);
+    }
+    if (!TARGETS.length) {
+      setTargetSummary(null, null);
+      setConn("未发现目标", "warn");
+      log("扫描失败", "", false, (discovery.errors || []).slice(0, 2).join(" / "));
       return;
     }
-    if (!META) META = await window.pywebview.api.protocol_meta();
-    MONITORS = st.monitors || [];
-    paintAddrSeg(st.address);
-
-    const chips = $("#chips");
-    chips.appendChild(chip(`${icon(I.usb, "sm")}${st.backend} · ${st.address}`, "tn"));
-    chips.appendChild(chip(`${icon(I.chipv, "sm")}硬件 v— · 软件 v—`, "tn", "chip-ver"));
-
-    renderMonitorOptions(MONITORS, prevId);
-    const pick = Number($("#monitor-select").value || (MONITORS[0] && MONITORS[0].id) || 0);
-    await pickMonitor(pick);
+    await selectTarget(TARGETS[0].id);
   } finally {
     refreshing = false;
-    btn.classList.remove("spin");
+    $("#win-refresh").classList.remove("spin");
   }
 }
 
-// ---- 换肤 ----
-function applyTheme(t) {
-  document.body.setAttribute("data-theme", t === "light" ? "light" : "dark");
-  try { localStorage.setItem("nanwei-theme", t); } catch (e) {}
-}
-function initTheme() {
-  let t = "dark";
-  try { t = localStorage.getItem("nanwei-theme") || "dark"; } catch (e) {}
-  applyTheme(t);
+function bindControls() {
+  document.addEventListener("click", (event) => {
+    const picker = $("#target-picker");
+    if (picker && picker.open && !picker.contains(event.target)) picker.open = false;
+  });
+
+  $("#skin").addEventListener("click", () => {
+    applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
+  });
+  $("#win-refresh").addEventListener("click", refresh);
+  $("#win-min").addEventListener("click", () => bridge().minimize_window());
+  $("#win-close").addEventListener("click", () => bridge().close_window());
+  $$(".resz").forEach((el) => {
+    el.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      bridge().start_resize(Number(el.dataset.ht));
+    });
+  });
+
+  ["brightness", "contrast"].forEach((id) => {
+    const input = $(`#${id}`);
+    input.addEventListener("input", () => syncMeter(input));
+    input.addEventListener("change", async () => {
+      const op = META.ops[id];
+      const result = await bridge().set_param(op, Number(input.value));
+      log(`写${id}`, result.tx, result.ok, result.ok ? "" : result.error || "");
+      if (result.ok) await loadParam(id, op);
+    });
+  });
+
+  $$(".step").forEach((button) => {
+    button.addEventListener("click", () => {
+      const input = $(`#${button.dataset.target}`);
+      const step = Number(button.dataset.step || 0);
+      input.value = String(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value) + step)));
+      syncMeter(input);
+      input.dispatchEvent(new Event("change"));
+    });
+  });
+
+  $$(".key-grid button").forEach((button) => {
+    button.addEventListener("click", async () => {
+      button.animate(
+        [{ transform: "scale(1)" }, { transform: "scale(.96)" }, { transform: "scale(1)" }],
+        { duration: 180, easing: "cubic-bezier(.2,.8,.2,1)" }
+      );
+      const key = button.dataset.key;
+      const result = await bridge().press_key(key);
+      log(`按键 ${button.textContent.trim()}`, result.tx, result.ok, result.ok ? "" : result.error || "");
+      setConn(result.ok ? "已连接" : `按键失败: ${result.error || ""}`, result.ok ? "ok" : "warn");
+    });
+  });
 }
 
-initTheme();
-window.addEventListener("pywebviewready", () => {
+function boot() {
   initTheme();
-  const toggle = () => applyTheme(document.body.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  const skin = $("#skin");
-  skin.addEventListener("click", toggle);
-  skin.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
-  $("#win-min").addEventListener("click", () => window.pywebview.api.minimize_window());
-  $("#win-close").addEventListener("click", () => window.pywebview.api.close_window());
-  $("#win-refresh").addEventListener("click", () => refresh());
-  document.querySelectorAll(".resz").forEach((el) => {
-    el.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      window.pywebview?.api?.start_resize(Number(el.dataset.ht));
-    });
-  });
-  // 显示器下拉框
-  $("#monitor-select").addEventListener("change", async (e) => {
-    const m = MONITORS.find((x) => x.id === Number(e.target.value));
-    if (m) await pickMonitor(m.id);
-  });
-  // IIC 地址切换: 存下来并整体重连
-  document.querySelectorAll("#addr-seg span").forEach((s) => {
-    s.addEventListener("click", async () => {
-      if (s.classList.contains("on")) return;
-      saveAddr(s.dataset.addr);
-      paintAddrSeg(s.dataset.addr);
-      await refresh();
-    });
-  });
+  bindControls();
   refresh();
-});
+}
+
+if (window.pywebview) {
+  window.addEventListener("pywebviewready", boot);
+} else {
+  boot();
+}
