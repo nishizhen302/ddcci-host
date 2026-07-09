@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DDCCI控制台</title>
+  <!-- style.css 是 ui/style.css 的副本: pywebview 的 http 服务根不允许 ../ 向上引用 (pinmux 同款做法) -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* 日志窗 (本页专用, 其余全部复用 style.css) */
+    .log { display: grid; gap: 6px; max-height: 200px; overflow-y: auto; font-size: 11.5px; }
+    .log-row { display: flex; gap: 8px; align-items: baseline; line-height: 1.5; }
+    .log-row .t { color: var(--muted); flex: none; }
+    .log-row .frame { font-family: Consolas, monospace; color: var(--soft); word-break: break-all; }
+    .log-row .r-ok { color: var(--ok); flex: none; }
+    .log-row .r-err { color: var(--warn, #e0a23b); flex: none; }
+    /* 地址切换行: 左标签 + 右侧 0x5E/0x6E 分段 */
+    .addr-row { display: flex; align-items: center; gap: 10px; }
+    .addr-row .lbl { font-size: 12px; color: var(--muted); letter-spacing: .03em; flex: none; }
+    .addr-row .seg { flex: none; margin-left: auto; }
+    .addr-row .seg span { padding: 5px 14px; }
+  </style>
+</head>
+<body data-theme="dark">
+  <div class="resz t"  data-ht="12"></div>
+  <div class="resz b"  data-ht="15"></div>
+  <div class="resz l"  data-ht="10"></div>
+  <div class="resz r"  data-ht="11"></div>
+  <div class="resz tl" data-ht="13"></div>
+  <div class="resz tr" data-ht="14"></div>
+  <div class="resz bl" data-ht="16"></div>
+  <div class="resz br" data-ht="17"></div>
+
+  <div class="app">
+    <div class="panel">
+      <div class="pbar pywebview-drag-region">
+        <span class="ttl"><span id="pulse" class="pulse" data-state="idle"></span><span id="conn">连接中…</span></span>
+        <span class="winctl pywebview-no-drag">
+          <button id="win-refresh" class="wbtn" title="重新建链" aria-label="重新建链">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5"/></svg>
+          </button>
+          <span id="skin" class="skin" title="切换皮肤" role="button" tabindex="0" aria-label="切换深色 / 白底">
+            <span class="moon">🌙</span><span class="sun">☀</span>
+          </span>
+          <button id="win-min" class="wbtn" title="最小化" aria-label="最小化">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14"/></svg>
+          </button>
+          <button id="win-close" class="wbtn wclose" title="关闭" aria-label="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </span>
+      </div>
+
+      <div class="body">
+        <label class="sel" id="sel-wrap">
+          <span class="ic">
+            <svg class="i" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            <span id="sel-name">—</span>
+          </span>
+          <span class="sel-meta tn"><span id="sel-id"></span> ⌄</span>
+          <select id="monitor-select" aria-label="选择显示器"></select>
+        </label>
+
+        <div class="addr-row">
+          <span class="lbl">IIC 从机地址</span>
+          <div class="seg" id="addr-seg">
+            <span data-addr="0x5E" class="tn">0x5E</span>
+            <span data-addr="0x6E" class="tn">0x6E</span>
+          </div>
+        </div>
+
+        <div class="chips" id="chips"></div>
+
+        <div id="controls" aria-live="polite"></div>
+
+        <div id="osdkeys" class="osdkeys"></div>
+
+        <details id="logbox" class="advanced">
+          <summary>命令日志 · 原始帧</summary>
+          <p class="advanced-hint">每条命令的线上帧 (含从机地址 0x5E) 与结果, 新的在上。</p>
+          <div id="log" class="log"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

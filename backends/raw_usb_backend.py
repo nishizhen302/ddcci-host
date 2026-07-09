@@ -26,6 +26,7 @@ DDC 写恒 NAK, 是死路; 正解是复刻 Beacon/USBLibrary 的裸 USB 管道 �
 - 写命令的板写状态 (ReadFile(2)) 不总可靠, 以"读得回 GET 回包"为送达判据 (round-trip)。
 """
 import ctypes
+import os
 import time
 from ctypes import wintypes
 
@@ -33,7 +34,7 @@ from backends.base import Backend, Monitor
 
 # RTUsb 私有设备接口 GUID (非通用 USB GUID); SetupAPI 按此枚举得设备路径。
 _RTUSB_GUID = (0xd3a14581, 0xfdda, 0x4402, (0xb5, 0xf9, 0x83, 0x73, 0xeb, 0xc5, 0x4d, 0xdb))
-_SLAVE = 0x6E          # 显示器 DDC/CI 8bit 从地址
+_SLAVE = 0x5E          # 显示器 DDC/CI 8bit 从地址 (南微协议显示器原生 0x5E, 非标准 0x6E)
 _SUB = 0x51            # DDC/CI 源地址 (virtual host)
 _CMD_SET_VCP = 0x03    # DDC/CI SET VCP Feature 命令字
 _CMD_GET_VCP = 0x01    # DDC/CI GET VCP Feature 命令字
@@ -80,15 +81,15 @@ def get_vcp_payload(code):
     return [_CMD_GET_VCP, code & 0xFF]
 
 
-def parse_vcp_reply(buf, code=None):
+def parse_vcp_reply(buf, code=None, slave=_SLAVE):
     """从读回缓冲扫 GET VCP Feature Reply, 返回 (current, maximum); 解析不出返回 None。
 
     标准回包 (去掉外层): 6E 88 02 result vcp typ maxHi maxLo curHi curLo chk。
-    扫 `6E` 后跟 `0x8x` (含长度位) 且其后操作码=0x02 的位置起解。
+    扫 `slave` 后跟 `0x8x` (含长度位) 且其后操作码=0x02 的位置起解。
     """
     n = len(buf)
     for i in range(n - 1):
-        if buf[i] == _SLAVE and (buf[i + 1] & 0x80):
+        if buf[i] == slave and (buf[i + 1] & 0x80):
             body = buf[i + 2:]
             if len(body) < 8 or body[0] != _OP_GET_REPLY:
                 continue
@@ -155,8 +156,16 @@ class RawUsbBackend(Backend):
     name = "rawusb"
     address = _SLAVE
 
-    def __init__(self, read_settle=0.15):
+    def __init__(self, read_settle=0.15, set_settle=0.12, slave=None):
+        # 从机地址: 显式参数 > 环境变量 DDCCI_SLAVE (如 0x6E, 标准机型陪练用) > 模块默认 0x5E
+        if slave is None:
+            slave = int(os.environ.get("DDCCI_SLAVE", "0"), 0) or _SLAVE
+        self._slave = slave & 0xFF
+        self.address = self._slave
         self._read_settle = read_settle
+        # SET VCP 写完到下一条命令(尤其 GET 锁存地址后读回)之间必须留时间给固件单线程
+        # 处理完, 否则地址没锁好就 GET -> 读空。非活动口走 0x6E 时固件处理更慢, 这步必须。
+        self._set_settle = set_settle
         self._k32 = ctypes.WinDLL("kernel32", use_last_error=True)
         path = _find_device_path()
         if not path:
@@ -196,31 +205,39 @@ class RawUsbBackend(Backend):
 
     # ---- 板包 I²C ----
     def _i2c_write(self, data):
-        self._write_bytes(board_write_packet(data))
+        self._write_bytes(board_write_packet(data, slave=self._slave))
         return self._read_bytes(2)   # 板写状态 (00 00 = OK)
 
     def _i2c_read(self, n):
-        self._write_bytes(board_read_packet(n))
+        self._write_bytes(board_read_packet(n, slave=self._slave))
         return self._read_bytes(n + 2)   # 尾 2 字节 = 板 status + sum8
 
     # ---- Backend 接口 ----
     def enum_monitors(self):
-        return [Monitor(0, "Realtek USB ISP 小板 (RTUsb, DDC/CI 0x6E)")]
+        return [Monitor(0, "Realtek USB ISP 小板 (RTUsb, DDC/CI 0x%02X)" % self._slave)]
 
     def set_vcp(self, mon_id, code, value):
-        self._i2c_write(ddc_frame(set_vcp_payload(code, value)))
+        self._i2c_write(ddc_frame(set_vcp_payload(code, value), slave=self._slave))
+        # 留时间给固件处理这条 SET(如锁存 peek 地址), 再让上层发下一条 GET/SET。
+        time.sleep(self._set_settle)
         return True
 
     def get_vcp(self, mon_id, code, retries=4):
-        # 坑(PanelCalib 实测): 0x6E 回包有延迟、可能带前导 0, 需 settle 后多读几次扫 `6E 8x`。
-        self._i2c_write(ddc_frame(get_vcp_payload(code)))
+        # 坑(PanelCalib 实测): 回包有延迟、可能带前导 0, 需 settle 后多读几次扫 `slave 8x`。
+        self._i2c_write(ddc_frame(get_vcp_payload(code), slave=self._slave))
         for _ in range(max(1, retries)):
             time.sleep(self._read_settle)
             raw = self._i2c_read(16)   # 多读几字节容前导 0 + 完整 11 字节回包
-            r = parse_vcp_reply(raw, code)
+            r = parse_vcp_reply(raw, code, slave=self._slave)
             if r is not None:
                 return r
         return None
+
+    def send_raw(self, mon_id, payload):
+        """发任意 payload 的 DDC/CI 帧 (南微模拟按键 0xC0 等非标命令)。组帧/校验同标准帧。"""
+        self._i2c_write(ddc_frame(payload, slave=self._slave))
+        time.sleep(self._set_settle)
+        return True
 
     def read_caps(self, mon_id):
         # capabilities 长帧分片读暂未实现; pinmux/phytune 不依赖 caps, 返回 None。
