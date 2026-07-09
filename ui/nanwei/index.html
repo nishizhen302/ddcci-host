@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DDCCI控制台</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260710e">
 </head>
 <body data-theme="light">
   <div class="resz t"  data-ht="12"></div>
@@ -20,27 +20,25 @@
     <header class="titlebar pywebview-drag-region">
       <div class="brand">
         <span id="pulse" class="status-dot" data-state="idle"></span>
-        <div>
-          <strong>Nanwei Control</strong>
-          <span id="conn">DDCCI / IIC Utility</span>
-        </div>
+        <strong>DDC控制台</strong>
+        <span id="conn">连接中…</span>
       </div>
-      <div class="title-actions pywebview-no-drag">
-        <button id="win-refresh" class="icon-btn" type="button" aria-label="重新扫描">↻</button>
-        <button id="skin" class="theme-toggle" type="button" aria-label="切换皮肤">
-          <span>Light</span>
-          <i></i>
-          <span>Dark</span>
+      <div class="title-actions">
+        <button id="win-refresh" class="icon-btn pywebview-no-drag" type="button" aria-label="重新扫描" title="重新扫描">↻</button>
+        <button id="skin" class="icon-btn theme-toggle pywebview-no-drag" type="button" aria-label="切换皮肤" title="切换深色 / 浅色">
+          <span class="moon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+          <span class="sun"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.66 1.41"/></svg></span>
         </button>
-        <button id="win-min" class="icon-btn ghost" type="button" aria-label="最小化">−</button>
-        <button id="win-close" class="icon-btn close" type="button" aria-label="关闭">×</button>
+        <button id="win-min" class="icon-btn ghost pywebview-no-drag" type="button" aria-label="最小化" title="最小化">−</button>
+        <button id="win-close" class="icon-btn close pywebview-no-drag" type="button" aria-label="关闭" title="关闭">×</button>
       </div>
     </header>
 
+    <div class="scroll">
+    <div class="scroll-inner">
     <section class="connect-strip" aria-label="连接信息">
       <details class="target-picker" id="target-picker">
         <summary>
-          <span class="eyebrow">当前目标</span>
           <strong id="target-name">扫描中...</strong>
         </summary>
         <div id="target-menu" class="target-menu" role="listbox" aria-label="选择控制路径"></div>
@@ -143,8 +141,10 @@
         </details>
       </div>
     </details>
+    </div>
+    </div>
   </main>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20260710e"></script>
 </body>
 </html>

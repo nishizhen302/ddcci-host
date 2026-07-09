@@ -81,6 +81,26 @@ function log(label, tx, ok = true, extra = "") {
   while (box.children.length > 80) box.removeChild(box.lastChild);
 }
 
+// 窗口高度自适应内容: 测「标题栏 + 滚动区内容真实高」, 让 Python resize 窗口到该高度。
+// 展开/收起「更多设置」等会改变内容高 -> 窗口跟着长高/收矮, 不再固定留白。
+let fitScheduled = false;
+function fitWindow() {
+  if (!bridgeReady() || fitScheduled) return;   // demo 预览不 resize
+  fitScheduled = true;
+  requestAnimationFrame(() => {
+    fitScheduled = false;
+    const tb = document.querySelector(".titlebar");
+    const inner = document.querySelector(".scroll-inner");
+    if (!tb || !inner) return;
+    // 用 .scroll-inner 的自然高 (不受滚动容器 flex 撑满影响), 才能真正收缩窗口。
+    // +20 = .scroll 的上下 padding (4 + 16)。
+    const need = Math.ceil(tb.offsetHeight + inner.offsetHeight + 20);
+    const maxH = Math.max(320, Math.floor((window.screen.availHeight || 900) - 60));
+    const target = Math.max(300, Math.min(need, maxH));   // 超屏才封顶 (滚动兜底)
+    bridge().resize_to(Math.round(window.innerWidth), target);
+  });
+}
+
 function applyTheme(theme) {
   const next = theme === "dark" ? "dark" : "light";
   document.body.dataset.theme = next;
@@ -176,6 +196,7 @@ async function loadParams() {
   await loadParam("contrast", META.ops.contrast);
   await loadDiscrete("colortemp", META.ops.colortemp, META.colortemp);
   await loadDiscrete("gamma", META.ops.gamma, META.gamma);
+  fitWindow();   // 参数渲染完, 按内容真实高度自适应窗口
 }
 
 async function loadDiscrete(kind, op, options) {
@@ -260,7 +281,19 @@ function bindControls() {
 
   ["brightness", "contrast"].forEach((id) => {
     const input = $(`#${id}`);
-    input.addEventListener("input", () => syncMeter(input));
+    let lastSent = 0;
+    // 拖动中: 实时改屏 (节流 120ms 匹配 USB 每帧 settle, 不回读/不刷日志避免卡顿)
+    input.addEventListener("input", () => {
+      syncMeter(input);
+      const op = META && META.ops[id];
+      if (op == null) return;
+      const now = Date.now();
+      if (now - lastSent >= 120) {
+        lastSent = now;
+        bridge().set_param(op, Number(input.value));
+      }
+    });
+    // 松手: 发最终值确保落地, 回读确认并记日志
     input.addEventListener("change", async () => {
       const op = META.ops[id];
       const result = await bridge().set_param(op, Number(input.value));
@@ -279,6 +312,10 @@ function bindControls() {
     });
   });
 
+  // 展开/收起任何抽屉 (更多设置 / 图像 / 色彩 / 日志) 后, 窗口高度重新自适应
+  document.querySelectorAll("details").forEach((d) =>
+    d.addEventListener("toggle", fitWindow));
+
   $$(".key-grid button").forEach((button) => {
     button.addEventListener("click", async () => {
       button.animate(
@@ -293,14 +330,27 @@ function bindControls() {
   });
 }
 
-function boot() {
-  initTheme();
-  bindControls();
+// UI 骨架 (主题/控件绑定) 不依赖后端桥, 立即渲染。
+initTheme();
+bindControls();
+
+// 连接真实后端只做一次。绝不能在 pywebview API 未就绪时误落到 demoBridge:
+// 那会让整个界面跑假数据 —— 滑条/按键都"成功"但显示器毫无反应。
+let CONNECTED = false;
+function connectBackend() {
+  if (CONNECTED) return;
+  CONNECTED = true;
   refresh();
 }
-
-if (window.pywebview) {
-  window.addEventListener("pywebviewready", boot);
+function bridgeReady() {
+  return !!(window.pywebview && window.pywebview.api);
+}
+if (bridgeReady()) {
+  // API 已挂载 (pywebviewready 可能已触发过, 监听也收不到了) —— 直接连。
+  connectBackend();
 } else {
-  boot();
+  // pywebview 环境: 等 API 就绪事件再连真后端。
+  window.addEventListener("pywebviewready", connectBackend);
+  // 纯浏览器预览 (无 pywebview): 给足注入时间, 超时仍无 API 才回落 demo 数据。
+  setTimeout(() => { if (!bridgeReady()) connectBackend(); }, 2500);
 }

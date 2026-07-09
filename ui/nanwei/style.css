@@ -39,15 +39,10 @@
 html, body { height: 100%; overflow: hidden; }
 body {
   margin: 0;
-  display: grid;
-  place-items: center;
-  padding: 14px;
-  background:
-    radial-gradient(circle at 20% 0%, rgba(50, 183, 232, .22), transparent 28%),
-    linear-gradient(135deg, var(--bg), color-mix(in srgb, var(--bg) 84%, #fff));
+  background: var(--bg);
   color: var(--text);
   font: 13px/1.42 "Segoe UI", Inter, system-ui, sans-serif;
-  transition: background .32s var(--ease), color .32s var(--ease);
+  transition: color .32s var(--ease);
 }
 
 button, input { font: inherit; }
@@ -57,16 +52,34 @@ button {
   cursor: pointer;
 }
 
+/* 无边框窗口: shell 铺满整窗 (DWM 负责圆角), 承载渐变背景。不再是居中的小卡片 —— 消除四周留白。 */
 .shell {
-  width: min(540px, calc(100vw - 24px));
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: var(--window);
-  box-shadow: var(--shadow);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(50, 183, 232, .22), transparent 34%),
+    linear-gradient(150deg, var(--bg), color-mix(in srgb, var(--bg) 84%, #fff));
+  transition: background .32s var(--ease);
 }
+
+/* 标题栏固定顶部, 其余内容在下方滚动区滚动 (展开更多设置也能滚到) */
+.scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 12px 16px;
+}
+.scroll::-webkit-scrollbar { width: 9px; }
+.scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.scroll::-webkit-scrollbar-track { background: transparent; }
 
 .resz { position: fixed; z-index: 9999; }
 .resz.t  { top: 0; left: 9px; right: 9px; height: 5px; cursor: ns-resize; }
@@ -81,12 +94,15 @@ button {
 .titlebar.pywebview-drag-region { cursor: default; }
 
 .titlebar {
-  height: 48px;
+  flex: none;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 3px 8px 7px;
+  padding: 2px 14px 2px 16px;
 }
+/* 标题栏整体可拖; 仅按钮本身不可拖 -> 按钮之间的空隙也能拖动窗口 */
+.brand { -webkit-user-select: none; user-select: none; }
 
 .brand {
   display: flex;
@@ -95,18 +111,15 @@ button {
 }
 
 .brand strong {
-  display: block;
   font-size: 14px;
   letter-spacing: .01em;
 }
 
-.brand span:not(.status-dot) {
-  display: block;
-  margin-top: 1px;
+/* 「已连接」等状态紧跟标题右侧同一行, 让标题栏保持单行矮高度 */
+.brand #conn {
   color: var(--muted);
-  font-size: 10px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: .02em;
 }
 
 .status-dot {
@@ -147,36 +160,14 @@ button {
   border-color: transparent;
 }
 
-.theme-toggle {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 106px;
-  height: 28px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--window-strong) 88%, transparent);
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.theme-toggle i {
-  position: absolute;
-  left: 4px;
-  width: 49px;
-  height: 20px;
-  border-radius: 999px;
-  background: var(--text);
-  z-index: 0;
-  transition: transform .22s var(--ease);
-}
-
-[data-theme="dark"] .theme-toggle i { transform: translateX(49px); }
-.theme-toggle span { position: relative; z-index: 1; flex: 1; text-align: center; }
-[data-theme="light"] .theme-toggle span:first-child,
-[data-theme="dark"] .theme-toggle span:last-child { color: var(--window-strong); font-weight: 650; }
+/* 换肤按钮: 复用 .icon-btn 的 28x28 圆框, 内部按当前主题显示 月亮(深色)/太阳(浅色) 图标 */
+.theme-toggle { display: grid; place-items: center; padding: 0; }
+.theme-toggle .moon,
+.theme-toggle .sun { display: inline-flex; align-items: center; justify-content: center; }
+.theme-toggle .ic { width: 15px; height: 15px; }
+.theme-toggle .sun { display: none; }
+[data-theme="light"] .theme-toggle .moon { display: none; }
+[data-theme="light"] .theme-toggle .sun { display: inline-flex; }
 
 .connect-strip,
 .panel,
@@ -231,26 +222,38 @@ button {
   display: block;
   list-style: none;
   cursor: pointer;
+  padding: 7px 34px 7px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--window) 62%, transparent);
+  transition: border-color .16s var(--ease), background .16s var(--ease);
 }
+
+/* 去掉「当前目标」标签后, 下拉框只剩目标名一行, 去掉顶距使其在框内居中 */
+.target-picker summary strong { margin-top: 0; }
+
+.target-picker summary:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--window) 88%, transparent);
+}
+
+.target-picker[open] summary { border-color: var(--accent); }
 
 .target-picker summary::-webkit-details-marker { display: none; }
 
 .target-picker summary::after {
   content: "⌄";
   position: absolute;
-  right: 2px;
-  top: 20px;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-55%);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   transition: transform .18s var(--ease);
 }
 
-.target-picker summary {
-  padding-right: 18px;
-}
-
 .target-picker[open] summary::after {
-  transform: rotate(180deg);
+  transform: translateY(-55%) rotate(180deg);
 }
 
 .target-menu {
@@ -644,9 +647,9 @@ button {
   white-space: nowrap;
 }
 
-@media (max-width: 560px) {
-  body { padding: 10px; }
-  .shell { min-height: auto; border-radius: 18px; }
+/* 仅在真正很窄时才重排为单列 (无边框窗口默认 500 宽, 不该触发) —— 断点从 560 降到 400,
+   并移除 body padding / shell 圆角: 那会让 shell 缩进、四周露出背景 = "外围一圈"。 */
+@media (max-width: 400px) {
   .connect-strip { grid-template-columns: 1fr; }
   .chip-row { flex-wrap: wrap; }
   .control-row { grid-template-columns: 1fr 32px 32px; }

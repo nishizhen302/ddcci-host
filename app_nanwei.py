@@ -209,6 +209,14 @@ class Api:
         except Exception as e:
             return _err(e)
 
+    def resize_to(self, width, height):
+        """按前端测得的内容高度调整窗口 (逻辑像素), 实现窗口高度自适应内容。"""
+        try:
+            webview.windows[0].resize(int(width), int(height))
+            return {"ok": True}
+        except Exception as e:
+            return _err(e)
+
 
 def main():
     backend_name = os.environ.get("DDCCI_BACKEND", "rawusb")
@@ -218,7 +226,7 @@ def main():
         WIN_TITLE,
         os.path.join(HERE, "ui", "nanwei", "index.html"),
         js_api=api,
-        width=580, height=520, min_size=(500, 360),
+        width=430, height=420, min_size=(390, 300),
         background_color="#0a0a0b",
         frameless=True, easy_drag=False,
     )
