@@ -22,10 +22,14 @@ HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 WIN_TITLE = "DDCCI控制台"
 
 
-def _err(e):
+def _err(e, backend=None):
     hint = None
     if isinstance(e, RuntimeError):
-        hint = "确认 USB 小板已插好、未被烧录工具独占。"
+        if backend == "gpu":
+            # 英伟达机走的是 32 位 helper 子进程 (64 位 nvapi 是死路), 分层排障靠 nvscan
+            hint = "显卡通道不通: 跑 nanwei_cli.py nvscan 看 helper 起没起来、哪块屏应答。"
+        else:
+            hint = "确认 USB 小板已插好、未被烧录工具独占。"
     elif isinstance(e, NotImplementedError):
         hint = "当前后端不支持该操作, 切 rawusb 后端。"
     return {"ok": False, "error": str(e) or e.__class__.__name__, "hint": hint}
@@ -108,7 +112,7 @@ class Api:
         except Exception as e:
             self._be = None
             self._dev = None
-            err = _err(e)
+            err = _err(e, self._backend_name)
             err["backend"] = self._backend_name
             return err
 
@@ -132,7 +136,7 @@ class Api:
         except Exception as e:
             self._be = None
             self._dev = None
-            err = _err(e)
+            err = _err(e, self._backend_name)
             err["backend"] = self._backend_name
             return err
 

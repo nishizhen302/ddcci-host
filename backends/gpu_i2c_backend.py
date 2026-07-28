@@ -8,20 +8,31 @@ r"""Backend C —— 显卡 (HDMI/DP) 原始 I²C 上的 DDC/CI, 支持非标从
 这两条路, 不需要内核驱动、不需要 32 位桥接:
 
 - NVIDIA: nvapi64.dll  NvAPI_I2CWrite / NvAPI_I2CRead (接口 ID 来自公开 nvapi.h)
+- NVIDIA(32 位桥): tools/nvddc32.exe —— 见下, 实机唯一走得通的那条
 - AMD:    atiadlxx.dll ADL_Display_WriteAndReadI2C   (旧工具字符串里就有这条)
 
-通道定位不靠猜: 枚举出的每个候选通道 (NVIDIA 每个 display handle / AMD 每个
-adapter × I²C line) 各发一条"读亮度"探测帧, 能解析出回包的才算一台显示器。
+通道定位不靠猜: 枚举出的每个候选通道 (NVIDIA 每个 display / AMD 每个 adapter ×
+I²C line) 各发一条"读亮度"探测帧, 能解析出回包的才算一台显示器。
 
-⚠️ 状态: 结构体/接口 ID 按公开头文件编写, 尚未在真显卡上实测 (笔记本只有核显)。
-到台式机上跑 `set DDCCI_BACKEND=gpu && py -3 nanwei_cli.py check` 验证;
-排障开 `set DDCCI_GPU_DEBUG=1` 看每步返回码。
+== 2026-07-24 实机结论 (英伟达 + Win7, 抓别人能通 0x5E 的工具得到) ==
+1. 结构体要 NV_I2C_INFO_V1 (不是 V3), 非 Ex 的 I2CWrite/I2CRead, i2cSpeed=0x0A。
+2. handle 参数要传"第一块 display 的 displayMask 值", 不是 EnumNvidiaDisplayHandle
+   返回的 0xDE0000xx 句柄 (传句柄恒 -8 INVALID_HANDLE); 选哪块屏靠结构体 displayMask。
+3. DDC 源地址 0x51 并进 data, regAddrSize=0 (当寄存器发不通); 读地址 = 写地址|1 (0x5F)。
+4. **那台机的 64 位 nvapi64 无论怎么调都回 -8, 只有 32 位 nvapi 能通** —— 所以本模块
+   除了进程内直连 (nvapi64/atiadlxx), 还有一条 `nv32` 通道: 走 32 位 helper 子进程
+   `tools/nvddc32.exe` (backends/nv32_helper.py)。两条都当候选丢进探测, 谁应答用谁。
+AMD 侧 (2026-07-10 真机) 走 atiadlxx 直连即可, 无 32 位问题。
+
+排障: `set DDCCI_BACKEND=gpu && py -3 nanwei_cli.py check`, 开 `set DDCCI_GPU_DEBUG=1`
+看每条通道返回码; 只想试 32 位桥: `set DDCCI_GPU_CHANNELS=nv32`。
 """
 import ctypes
 import os
 import sys
 import time
 
+from backends import nv32_helper
 from backends.base import Backend, Monitor
 from backends.raw_usb_backend import (_SLAVE, _SUB, ddc_frame, get_vcp_payload,
                                       set_vcp_payload, parse_vcp_reply)
@@ -44,10 +55,13 @@ _NV_ID = {
     "I2CWrite": 0xE812EB07,
 }
 _NVAPI_END_ENUMERATION = -7
-_NVAPI_I2C_SPEED_DEPRECATED = 0xFFFF
+# 2026-07-24 真机抓包(别人能通 0x5E 的 Beacon_Qa_TestGamma, nvapi shim 拦截)结论：
+# 之前 NV 恒 -5 的真凶是用了 V3 结构体。能通的工具用 NV_I2C_INFO_V1(version 低16位=
+# sizeof)，非 Ex I2CWrite/Read，i2cSpeed 用固定值 0x0A(V1 没有 i2cSpeedKhz/portId)。
+_NVAPI_I2C_SPEED = 0x0A
 
 
-class _NvI2cInfoV3(ctypes.Structure):
+class _NvI2cInfoV1(ctypes.Structure):
     _fields_ = [
         ("version", ctypes.c_uint32),
         ("displayMask", ctypes.c_uint32),
@@ -57,59 +71,56 @@ class _NvI2cInfoV3(ctypes.Structure):
         ("regAddrSize", ctypes.c_uint32),
         ("pbData", ctypes.POINTER(ctypes.c_uint8)),
         ("cbSize", ctypes.c_uint32),
-        ("i2cSpeed", ctypes.c_uint32),        # 必须 = DEPRECATED, 实际速度看 i2cSpeedKhz
-        ("i2cSpeedKhz", ctypes.c_uint32),     # 0xFFFF = 默认
-        ("portId", ctypes.c_uint8),
-        ("bIsPortIdSet", ctypes.c_uint32),    # 0 = 用 displayMask 自动选口
+        ("i2cSpeed", ctypes.c_uint32),        # V1 尾字段；抓包实测填 0x0A
     ]
 
 
-_NV_I2C_INFO_VER3 = ctypes.sizeof(_NvI2cInfoV3) | (3 << 16)
+# version 低 16 位是结构体字节数(64 位下 = 48 → 0x00010030；32 位工具是 0x00010020)，
+# 由 ctypes.sizeof 自动算，跟着调用方位数走，别硬编码。
+_NV_I2C_INFO_VER1 = ctypes.sizeof(_NvI2cInfoV1) | (1 << 16)
 
 
 class _NvChannel:
-    """一个 NVIDIA display handle = 一条候选 DDC 通道。"""
+    """一块 NVIDIA display (由 displayMask 标识) = 一条候选 DDC 通道。
 
-    def __init__(self, funcs, handle, output_id, idx, slave=_SLAVE):
+    handle 传的是"第一块 display 的 mask 值"(实机抓包实证), 全通道共用同一个;
+    区分目标屏只靠结构体里的 displayMask。
+    """
+
+    def __init__(self, funcs, handle, mask, idx, slave=_SLAVE):
         self._f = funcs
         self._h = handle
-        self._mask = output_id
+        self._mask = mask
         self.slave = slave
-        self.desc = "NVIDIA display #%d (outputId 0x%X)" % (idx, output_id)
+        self.desc = "NVIDIA display #%d (mask 0x%X)" % (idx, mask)
 
-    def _info(self, dev_addr, reg, data_buf, nbytes):
-        info = _NvI2cInfoV3()
-        info.version = _NV_I2C_INFO_VER3
+    def _info(self, dev_addr, data_buf, nbytes):
+        info = _NvI2cInfoV1()
+        info.version = _NV_I2C_INFO_VER1
         info.displayMask = self._mask
         info.bIsDDCPort = 1
         info.i2cDevAddress = dev_addr
-        if reg is not None:
-            info.pbI2cRegAddress = ctypes.cast(reg, ctypes.POINTER(ctypes.c_uint8))
-            info.regAddrSize = 1
-        else:
-            info.pbI2cRegAddress = None
-            info.regAddrSize = 0
+        info.pbI2cRegAddress = None      # 源地址 0x51 并进 data, 不作寄存器
+        info.regAddrSize = 0
         info.pbData = ctypes.cast(data_buf, ctypes.POINTER(ctypes.c_uint8))
         info.cbSize = nbytes
-        info.i2cSpeed = _NVAPI_I2C_SPEED_DEPRECATED
-        info.i2cSpeedKhz = 0xFFFF
-        info.portId = 0
-        info.bIsPortIdSet = 0
+        info.i2cSpeed = _NVAPI_I2C_SPEED
         return info
 
     def i2c_write(self, data):
-        """写: 从机地址 + 寄存器(源地址) 0x51 + ddc 帧。"""
-        reg = (ctypes.c_uint8 * 1)(_SUB)
-        buf = (ctypes.c_uint8 * len(data))(*data)
-        info = self._info(self.slave, reg, buf, len(data))
+        """写: 数据 = 源地址 0x51 + ddc 帧 (从机地址由 i2cDevAddress 给)。"""
+        payload = [_SUB] + list(data)
+        buf = (ctypes.c_uint8 * len(payload))(*payload)
+        info = self._info(self.slave, buf, len(payload))
         st = self._f["I2CWrite"](self._h, ctypes.byref(info))
         _dbg("nv write st=%d", st)
         return st == 0
 
     def i2c_read(self, n):
-        """读回包: 直接从从机读 n 字节 (DDC 回读无寄存器阶段)。"""
+        """读回包: 从 从机读地址(=写地址|1, 即 0x5F) 读 n 字节 (DDC 回读无寄存器阶段)。
+        抓包实测别人工具读用 0x5F，之前用 0x5E 读不到。"""
         buf = (ctypes.c_uint8 * n)()
-        info = self._info(self.slave, None, buf, n)
+        info = self._info(self.slave | 1, buf, n)
         st = self._f["I2CRead"](self._h, ctypes.byref(info))
         _dbg("nv read st=%d", st)
         if st != 0:
@@ -141,7 +152,7 @@ def _enum_nv_channels(slave=_SLAVE):
     _dbg("nvapi Initialize st=%d", st)
     if st != 0:
         return []
-    chans = []
+    masks = []
     i = 0
     while True:
         h = ctypes.c_void_p()
@@ -153,10 +164,70 @@ def _enum_nv_channels(slave=_SLAVE):
             break
         out_id = ctypes.c_uint32(0)
         funcs["GetAssociatedDisplayOutputId"](h, ctypes.byref(out_id))
-        chans.append(_NvChannel(funcs, h, out_id.value or 1, i, slave=slave))
+        masks.append(out_id.value or 1)
         i += 1
-    _dbg("nvapi 枚举到 %d 个 display", len(chans))
+    if not masks:
+        _dbg("nvapi 一块 display 都没枚举到")
+        return []
+    # handle = 第一块 display 的 mask 值 (实机抓包: 传 Enum 出来的句柄恒 -8)
+    handle = ctypes.c_void_p(masks[0])
+    chans = [_NvChannel(funcs, handle, m, i, slave=slave) for i, m in enumerate(masks)]
+    _dbg("nvapi 枚举到 %d 个 display, handle=0x%X", len(chans), masks[0])
     return chans
+
+
+# ============ NVIDIA (32 位桥): tools/nvddc32.exe ============
+# 实机那台英伟达机上 64 位 nvapi64 全回 -8, 只有 32 位 nvapi 通; 64 位进程加载不了
+# 32 位 DLL, 故经 helper 子进程转发。协议/定位见 backends/nv32_helper.py。
+
+class _Nv32Channel:
+    """helper 里的一块 display = 一条候选 DDC 通道 (读写都经子进程一行命令)。"""
+
+    def __init__(self, client, mask, name=None, slave=_SLAVE):
+        self._c = client
+        self._mask = mask
+        self.slave = slave
+        self.desc = "NVIDIA(32桥) %s (mask 0x%X)" % (name or "display", mask)
+
+    def i2c_write(self, data):
+        try:
+            self._c.write(self._mask, self.slave, [_SUB] + list(data))
+            return True
+        except nv32_helper.Nv32Error as e:
+            _dbg("nv32 write 失败: %s", e)
+            return False
+
+    def i2c_read(self, n):
+        try:
+            return self._c.read(self._mask, self.slave | 1, n)
+        except nv32_helper.Nv32Error as e:
+            _dbg("nv32 read 失败: %s", e)
+            return []
+
+    def i2c_xfer(self, data, n, delay_ms):
+        """写完等 delay_ms 再读 —— 一次子进程往返, GET VCP 用这条省一半 IPC。"""
+        try:
+            return self._c.xfer(self._mask, self.slave, self.slave | 1,
+                                [_SUB] + list(data), n, delay_ms)
+        except nv32_helper.Nv32Error as e:
+            _dbg("nv32 xfer 失败: %s", e)
+            return []
+
+
+def _enum_nv32_channels(slave=_SLAVE):
+    """拉起 helper 并列出它枚举到的 display。返回 (通道列表, client);
+    helper 不可用时返回 ([], None) —— 非英伟达机走这条是正常的, 不报错。"""
+    try:
+        client = nv32_helper.Nv32Client().start()
+    except nv32_helper.Nv32Error as e:
+        _dbg("32 位 helper 不可用: %s", e)
+        return [], None
+    chans = []
+    for m in client.masks:
+        name = nv32_helper.edid_name(client.edid(m))
+        chans.append(_Nv32Channel(client, m, name, slave=slave))
+    _dbg("nv32 helper 枚举到 %d 个 display", len(chans))
+    return chans, client
 
 
 # ============ AMD: atiadlxx.dll ============
@@ -247,6 +318,17 @@ def _enum_adl_channels(slave=_SLAVE):
 
 # ============ 探测 + Backend ============
 
+def _read_after_write(channel, frame, n, settle):
+    """写一帧 + 等 settle + 读 n 字节。通道支持 i2c_xfer (32 位桥) 就一次往返干完。"""
+    xfer = getattr(channel, "i2c_xfer", None)
+    if xfer is not None:
+        return xfer(frame, n, int(settle * 1000))
+    if not channel.i2c_write(frame):
+        return []
+    time.sleep(settle)
+    return channel.i2c_read(n)
+
+
 def _probe(channel, settle=0.06, retries=2):
     """向通道发"读亮度", 能解析出回包 = 真显示器。AMD 读地址 slave/slave|1 都试。"""
     slave = channel.slave
@@ -257,11 +339,8 @@ def _probe(channel, settle=0.06, retries=2):
                 break
             channel.read_addr = read_addr
         try:
-            if not channel.i2c_write(frame):
-                continue
             for _ in range(retries):
-                time.sleep(settle)
-                raw = channel.i2c_read(16)
+                raw = _read_after_write(channel, frame, 16, settle)
                 if parse_vcp_reply(raw, 0x10, slave=slave) is not None:
                     _dbg("probe OK: %s", channel.desc)
                     return True
@@ -285,18 +364,36 @@ class GpuI2CBackend(Backend):
         # PDF 要求读回等 >40ms; 显卡通道无 USB 板中转, 60ms 足够
         self._read_settle = read_settle
         self._set_settle = set_settle
-        candidates = _enum_nv_channels(self._slave) + _enum_adl_channels(self._slave)
-        if not candidates:
-            raise RuntimeError(
-                "没找到显卡 I²C 通道 (nvapi64.dll / atiadlxx.dll 都加载不了)。"
-                "确认这台机器有 NVIDIA/AMD 显卡且装了官方驱动; "
-                "笔记本核显请改用 USB 小板 (DDCCI_BACKEND=rawusb)。")
-        self._chans = [c for c in candidates if _probe(c, self._read_settle)]
-        if not self._chans:
-            raise RuntimeError(
-                "显卡通道枚举到 %d 条, 但 0x%02X 都无应答。确认显示器接在这块显卡上、"
-                "从机地址选对 (0x5E/0x6E); 开 DDCCI_GPU_DEBUG=1 看逐通道返回码。"
-                % (len(candidates), self._slave))
+        self._nv32 = None            # 32 位 helper 进程 (用到才有)
+        # 想只试某类通道: DDCCI_GPU_CHANNELS=nv64,nv32,amd 里挑 (默认全试)
+        want = [s.strip() for s in
+                os.environ.get("DDCCI_GPU_CHANNELS", "nv64,nv32,amd").split(",") if s.strip()]
+        candidates = []
+        if "nv64" in want:
+            candidates += _enum_nv_channels(self._slave)      # 进程内直连 (快)
+        if "nv32" in want:
+            chans, client = _enum_nv32_channels(self._slave)  # 32 位 helper (那台机唯一通的)
+            candidates += chans
+            self._nv32 = client
+        if "amd" in want:
+            candidates += _enum_adl_channels(self._slave)
+        try:
+            if not candidates:
+                # 文案只用 ASCII 符号: 老机器 GBK 控制台 print 到 '²' 会抛
+                # UnicodeEncodeError, 把真正的错误盖掉。
+                raise RuntimeError(
+                    "没找到显卡 I2C 通道 (nvapi64.dll / atiadlxx.dll 加载不了, "
+                    "32 位 helper 也没枚举到 display)。确认这台机器有 NVIDIA/AMD 显卡"
+                    "且装了官方驱动; 笔记本核显请改用 USB 小板 (DDCCI_BACKEND=rawusb)。")
+            self._chans = [c for c in candidates if _probe(c, self._read_settle)]
+            if not self._chans:
+                raise RuntimeError(
+                    "显卡通道枚举到 %d 条, 但 0x%02X 都无应答。确认显示器接在这块显卡上、"
+                    "从机地址选对 (0x5E/0x6E); 开 DDCCI_GPU_DEBUG=1 看逐通道返回码。"
+                    % (len(candidates), self._slave))
+        except Exception:
+            self.close()             # 建链失败别把 helper 进程留着
+            raise
 
     def enum_monitors(self):
         return [Monitor(i, c.desc + " (DDC/CI 0x%02X)" % self._slave)
@@ -310,11 +407,10 @@ class GpuI2CBackend(Backend):
 
     def get_vcp(self, mon_id, code, retries=3):
         ch = self._chans[mon_id]
-        if not ch.i2c_write(ddc_frame(get_vcp_payload(code), slave=self._slave)):
-            return None
+        frame = ddc_frame(get_vcp_payload(code), slave=self._slave)
         for _ in range(max(1, retries)):
-            time.sleep(self._read_settle)
-            r = parse_vcp_reply(ch.i2c_read(16), code, slave=self._slave)
+            r = parse_vcp_reply(_read_after_write(ch, frame, 16, self._read_settle),
+                                code, slave=self._slave)
             if r is not None:
                 return r
         return None
@@ -327,3 +423,9 @@ class GpuI2CBackend(Backend):
 
     def read_caps(self, mon_id):
         return None
+
+    def close(self):
+        """关掉 32 位 helper 子进程 (直连通道无资源可放)。"""
+        c, self._nv32 = getattr(self, "_nv32", None), None
+        if c is not None:
+            c.close()

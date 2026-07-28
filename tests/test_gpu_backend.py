@@ -7,10 +7,11 @@ from backends.raw_usb_backend import ddc_frame, get_vcp_payload
 
 
 def test_nv_i2c_info_layout():
-    # x64 上 NV_I2C_INFO_V3 = 64 字节 (对齐后), version 高 16 位 = 3
-    assert ctypes.sizeof(G._NvI2cInfoV3) == 64
-    assert G._NV_I2C_INFO_VER3 >> 16 == 3
-    assert G._NV_I2C_INFO_VER3 & 0xFFFF == 64
+    # 2026-07-24 真机抓包确认要用 V1(不是 V3)。x64 上 NV_I2C_INFO_V1 = 48 字节
+    # (对齐后)，version 高 16 位 = 1，低 16 位 = sizeof。
+    assert ctypes.sizeof(G._NvI2cInfoV1) == 48
+    assert G._NV_I2C_INFO_VER1 >> 16 == 1
+    assert G._NV_I2C_INFO_VER1 & 0xFFFF == 48
 
 
 def test_adl_i2c_layout():

@@ -9,6 +9,8 @@ a = Analysis(
     binaries=[],
     datas=[
         ("ui/nanwei", "ui/nanwei"),
+        # 英伟达通道的 32 位 nvapi helper (64 位 nvapi 在实机上是死路, 见 nv32_helper.py)
+        ("tools/nvddc32.exe", "."),
     ],
     hiddenimports=[
         "webview.platforms.edgechromium",

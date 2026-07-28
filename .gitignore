@@ -13,6 +13,9 @@ _*.png
 # superpowers 工作目录 (brainstorm / skills 缓存, 非项目源码)
 .superpowers/
 
+# zig 编 helper 时顺带产的调试符号 (exe 本身要提交, 交付物依赖它)
+tools/*.pdb
+
 # OS
 Thumbs.db
 desktop.ini
