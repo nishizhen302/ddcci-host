@@ -32,7 +32,13 @@ GAMMA_VALUES = [{"label": "γ%d" % (i + 1), "value": 0x06 + i} for i in range(7)
 # ---- 模拟按键 (命令字 0xC0, 键值在"设置值高字节") ----
 CMD_SIM_KEY = 0xC0
 KEY_OP = 0x96
-KEYS = {"menu": 0x00, "right": 0x01, "left": 0x02, "exit": 0x03}
+KEYS = {"menu": 0x00, "right": 0x01, "left": 0x02, "exit": 0x03, "ok": 0x04}
+
+# ---- 按键宏 (PDF 没有这两条命令, 只能按 OSD 操作顺序模拟按键走进去) ----
+# ok=0x04 是 2026-07-10 真机逐值试出来的, PDF 未收录。
+FACTORY_KEYS = ("menu", "ok")                                        # 进工厂菜单
+AGING_KEYS = FACTORY_KEYS + ("menu", "menu", "right", "menu", "exit", "exit")  # 工厂菜单→老化
+AGING_KEY_GAP = 0.35   # 按键间隔: OSD 要时间响应, 发太快固件会丢键
 
 
 def key_payload(key_value):
@@ -81,8 +87,30 @@ class NanweiMonitor:
         return self._be.set_vcp(self._mon, op, value & 0xFF)
 
     def press_key(self, name):
-        """模拟按键 menu/right/left/exit (非标 0xC0 帧, 无回读)。"""
+        """模拟按键 menu/right/left/exit/ok (非标 0xC0 帧, 无回读)。"""
         return self._be.send_raw(self._mon, key_payload(KEYS[name]))
+
+    def press_key_value(self, value):
+        """按任意键值发一次模拟按键 (逆向 OK 等 PDF 未列出的键时逐个试)。"""
+        return self._be.send_raw(self._mon, key_payload(value & 0xFF))
+
+    def press_keys(self, names, key_gap=AGING_KEY_GAP):
+        """按序发一串模拟按键 (按键宏, 无回读)。返回已发按键名列表。"""
+        import time
+        sent = []
+        for name in names:
+            self.press_key(name)
+            sent.append(name)
+            time.sleep(key_gap)
+        return sent
+
+    def enter_factory(self, key_gap=AGING_KEY_GAP):
+        """按 FACTORY_KEYS (Menu→OK) 进工厂菜单。"""
+        return self.press_keys(FACTORY_KEYS, key_gap)
+
+    def start_aging(self, key_gap=AGING_KEY_GAP):
+        """按 AGING_KEYS 序列开启老化 (含进工厂菜单)。"""
+        return self.press_keys(AGING_KEYS, key_gap)
 
     def versions(self):
         """读硬件/软件版本。读不到的项为 None。"""

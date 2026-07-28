@@ -50,42 +50,57 @@ class Api:
 
     # ---- 连接 / 选显示器 ----
     def discover_targets(self):
-        """扫描可用控制路径。地址 0x5E/0x6E 自动探测, UI 只选择路径。"""
+        """扫描可用控制路径。地址 0x5E/0x6E 自动探测, UI 只选择路径。
+
+        快扫: gpu 只探显示器级通道 (fallback_scan=False), 启动明显更快;
+        全部落空时才放开 line 盲扫重扫一次 gpu (保底不丢功能)。
+        """
         targets = []
         errors = []
+
+        def scan(name, slave, **kw):
+            be = None
+            try:
+                be = select_backend(name, slave=slave, **kw)
+                mons = be.enum_monitors()
+                live = []
+                for m in mons:
+                    probe = be.get_vcp(m.id, nw.OP_BRIGHTNESS)
+                    if probe is not None:
+                        live.append(m)
+                for m in live:
+                    tid = "%s:0x%02X:%s" % (name, slave, m.id)
+                    targets.append({
+                        "id": tid,
+                        "backend": name,
+                        "address": "0x%02X" % slave,
+                        "mon_id": m.id,
+                        "description": m.description,
+                        "recommended": name == "rawusb",
+                    })
+            except Exception as e:
+                errors.append("%s 0x%02X: %s" % (name, slave, str(e) or e.__class__.__name__))
+            finally:
+                if be is not None:
+                    try:
+                        be.close()
+                    except Exception:
+                        pass
+
         backends = [self._backend_name]
         for name in ("rawusb", "gpu"):
             if name not in backends:
                 backends.append(name)
         for name in backends:
             for slave in (0x5E, 0x6E):
-                be = None
-                try:
-                    be = select_backend(name, slave=slave)
-                    mons = be.enum_monitors()
-                    live = []
-                    for m in mons:
-                        probe = be.get_vcp(m.id, nw.OP_BRIGHTNESS)
-                        if probe is not None:
-                            live.append(m)
-                    for m in live:
-                        tid = "%s:0x%02X:%s" % (name, slave, m.id)
-                        targets.append({
-                            "id": tid,
-                            "backend": name,
-                            "address": "0x%02X" % slave,
-                            "mon_id": m.id,
-                            "description": m.description,
-                            "recommended": name == "rawusb",
-                        })
-                except Exception as e:
-                    errors.append("%s 0x%02X: %s" % (name, slave, str(e) or e.__class__.__name__))
-                finally:
-                    if be is not None:
-                        try:
-                            be.close()
-                        except Exception:
-                            pass
+                if name == "gpu":
+                    scan(name, slave, fallback_scan=False)
+                else:
+                    scan(name, slave)
+        if not targets:
+            errors.append("快扫无目标, 放开 line 盲扫重试 gpu")
+            for slave in (0x5E, 0x6E):
+                scan("gpu", slave, fallback_scan=True)
         targets.sort(key=lambda t: (0 if t["recommended"] else 1, t["backend"], t["address"], t["mon_id"]))
         return {"ok": True, "targets": targets, "errors": errors}
 
@@ -178,6 +193,39 @@ class Api:
             dev = self._ensure()
             dev.press_key(name)
             return {"ok": True, "tx": nw.frame_hex(nw.key_payload(nw.KEYS[name]), dev.slave)}
+        except Exception as e:
+            return _err(e)
+
+    def enter_factory(self):
+        """按键宏进工厂菜单: Menu→OK。前端按钮期间置灰。"""
+        try:
+            dev = self._ensure()
+            sent = dev.enter_factory()
+            return {"ok": True, "keys": sent,
+                    "tx": " → ".join(k.upper() for k in sent)}
+        except Exception as e:
+            return _err(e)
+
+    def start_aging(self):
+        """按键宏开启老化: Menu→OK 进工厂菜单, 再 Menu×2→Right→Menu→Exit×2。
+
+        整个宏约 3 秒 (含按键间隔), 前端按钮期间置灰。
+        """
+        try:
+            dev = self._ensure()
+            sent = dev.start_aging()
+            return {"ok": True, "keys": sent,
+                    "tx": " → ".join(k.upper() for k in sent)}
+        except Exception as e:
+            return _err(e)
+
+    def press_key_raw(self, value):
+        """按任意键值发一次模拟按键 (0~255, 十进制或 '0x04')。逆向 OK 等未知键用。"""
+        try:
+            val = int(str(value), 0) & 0xFF
+            dev = self._ensure()
+            dev.press_key_value(val)
+            return {"ok": True, "tx": nw.frame_hex(nw.key_payload(val), dev.slave)}
         except Exception as e:
             return _err(e)
 

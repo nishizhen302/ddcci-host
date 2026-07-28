@@ -44,7 +44,14 @@ def test_sim_key_frame():
 
 
 def test_key_values():
-    assert nw.KEYS == {"menu": 0x00, "right": 0x01, "left": 0x02, "exit": 0x03}
+    # ok=0x04 不在 PDF 里, 2026-07-10 真机逐值试出来的 (进工厂菜单要用)
+    assert nw.KEYS == {"menu": 0x00, "right": 0x01, "left": 0x02, "exit": 0x03, "ok": 0x04}
+
+
+def test_macro_sequences():
+    assert nw.FACTORY_KEYS == ("menu", "ok")
+    assert nw.AGING_KEYS == ("menu", "ok", "menu", "menu", "right", "menu", "exit", "exit")
+    assert set(nw.AGING_KEYS) <= set(nw.KEYS)
 
 
 # ---- 读命令 (PDF 第 2-4 页) ----
@@ -120,6 +127,28 @@ def test_monitor_roundtrip():
     assert dev.get(nw.OP_BRIGHTNESS) == (0x40, 0x64)
     dev.press_key("exit")
     assert be.raw == [[0xC0, 0x96, 0x03, 0x00]]
+
+
+def test_press_key_value_accepts_unknown_code():
+    be = FakeBackend()
+    dev = nw.NanweiMonitor(be, 0)
+    dev.press_key_value(0x04)
+    assert be.raw == [[0xC0, 0x96, 0x04, 0x00]]
+
+
+def test_macro_sends_full_sequence_in_order():
+    be = FakeBackend()
+    dev = nw.NanweiMonitor(be, 0)
+    sent = dev.start_aging(key_gap=0)   # key_gap=0: 单测不等那 0.35s×8
+    assert sent == list(nw.AGING_KEYS)
+    assert be.raw == [[0xC0, 0x96, nw.KEYS[k], 0x00] for k in nw.AGING_KEYS]
+
+
+def test_enter_factory_sends_menu_then_ok():
+    be = FakeBackend()
+    dev = nw.NanweiMonitor(be, 0)
+    assert dev.enter_factory(key_gap=0) == ["menu", "ok"]
+    assert be.raw == [[0xC0, 0x96, 0x00, 0x00], [0xC0, 0x96, 0x04, 0x00]]
 
 
 def test_versions_none_when_silent():

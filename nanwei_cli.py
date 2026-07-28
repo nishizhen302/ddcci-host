@@ -6,7 +6,9 @@
   py -3 nanwei_cli.py check                  # 链路自检: 读版本 + 四个参数各读一次
   py -3 nanwei_cli.py get all|brightness|contrast|colortemp|gamma
   py -3 nanwei_cli.py set brightness 50      # 值十进制或 0x 十六进制
-  py -3 nanwei_cli.py key menu|right|left|exit
+  py -3 nanwei_cli.py key menu|right|left|exit|ok|0x04   # 也收十六进制键值(逆向未知键)
+  py -3 nanwei_cli.py factory                # 按键宏: Menu→OK 进工厂菜单
+  py -3 nanwei_cli.py aging                  # 按键宏: 进工厂菜单后一路进老化
   py -3 nanwei_cli.py ver
 
 英伟达机排障 (不建链, 直接问 32 位 helper, 建链失败时先跑这两条):
@@ -182,9 +184,24 @@ def main(argv):
 
         if cmd == "key":
             name = argv[2].lower()
-            print("TX  %s" % nw.frame_hex(nw.key_payload(nw.KEYS[name]), dev.slave))
-            dev.press_key(name)
+            if name in nw.KEYS:
+                value = nw.KEYS[name]
+            else:
+                value = int(name, 0) & 0xFF   # 逆向 PDF 未列出的键: 直接给键值
+                name = "0x%02X" % value
+            print("TX  %s" % nw.frame_hex(nw.key_payload(value), dev.slave))
+            dev.press_key_value(value)
             print("按键 %s 已发 (无回读, 看屏幕 OSD)" % name)
+            return 0
+
+        if cmd in ("factory", "aging"):
+            keys = nw.FACTORY_KEYS if cmd == "factory" else nw.AGING_KEYS
+            for k in keys:
+                print("TX  %s   (%s)" % (nw.frame_hex(nw.key_payload(nw.KEYS[k]), dev.slave), k))
+            sent = dev.enter_factory() if cmd == "factory" else dev.start_aging()
+            print("已发 %d 个键 (间隔 %.2fs): %s"
+                  % (len(sent), nw.AGING_KEY_GAP, " → ".join(k.upper() for k in sent)))
+            print("无回读, 看屏幕 OSD 确认")
             return 0
 
         print("未知命令 %r" % cmd)

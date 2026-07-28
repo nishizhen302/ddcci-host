@@ -29,6 +29,15 @@ def test_nanwei_ui_keeps_osd_before_secondary_drawer():
     assert html.index('class="panel remote"') < html.index('class="more-drawer"')
 
 
+def test_nanwei_ui_keeps_macro_buttons_next_to_osd_keys():
+    """工厂菜单/老化两个宏按钮 + 自定义键值行必须留在 OSD 面板里 (曾整批丢失过)。"""
+    html = _html()
+    assert 'id="factory-btn"' in html and 'id="aging-btn"' in html
+    assert 'id="raw-key-send"' in html
+    assert html.index('class="key-grid"') < html.index('class="macro-row"')
+    assert html.index('class="macro-row"') < html.index('class="more-drawer"')
+
+
 def test_nanwei_ui_hides_image_color_and_log_under_more_settings():
     html = _html()
     assert 'class="more-drawer"' in html

@@ -80,6 +80,29 @@ class GpuBackendForTest(G.GpuI2CBackend):
         self._chans = chans
 
 
+def test_adl_ddc_channel_is_primary_line_scan_is_fallback():
+    # 2026-07-10 真机通过的是显示器级 DDC block 通道; line 盲扫只当兜底
+    assert getattr(G._AdlDdcChannel, "is_fallback", False) is False
+    assert G._AdlChannel.is_fallback is True
+
+
+def test_pick_channels_skips_blind_scan_when_display_channel_answers():
+    good = FakeChannel(reply=_brightness_reply())
+    blind = FakeChannel(reply=_brightness_reply())
+    blind.is_fallback = True
+    assert G._pick_channels([good, blind], settle=0) == [good]
+    assert blind.writes == []          # 盲扫通道一帧都没发
+
+
+def test_pick_channels_falls_back_when_no_display_channel_answers():
+    dead = FakeChannel(reply=[0] * 16)
+    blind = FakeChannel(reply=_brightness_reply())
+    blind.is_fallback = True
+    assert G._pick_channels([dead, blind], settle=0) == [blind]
+    # 快扫模式下不碰盲扫通道, 宁可返回空让上层重扫
+    assert G._pick_channels([dead, blind], settle=0, fallback_scan=False) == []
+
+
 def test_backend_registered():
     import ddcci_core
     assert "gpu" in ddcci_core.available_backends()

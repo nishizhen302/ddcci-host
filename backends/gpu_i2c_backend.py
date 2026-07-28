@@ -22,7 +22,8 @@ I²C line) 各发一条"读亮度"探测帧, 能解析出回包的才算一台�
 4. **那台机的 64 位 nvapi64 无论怎么调都回 -8, 只有 32 位 nvapi 能通** —— 所以本模块
    除了进程内直连 (nvapi64/atiadlxx), 还有一条 `nv32` 通道: 走 32 位 helper 子进程
    `tools/nvddc32.exe` (backends/nv32_helper.py)。两条都当候选丢进探测, 谁应答用谁。
-AMD 侧 (2026-07-10 真机) 走 atiadlxx 直连即可, 无 32 位问题。
+AMD 侧 (2026-07-10 真机) 走 atiadlxx 直连即可, 无 32 位问题; 首选按显示器定位的
+ADL_Display_DDCBlockAccess_Get (旧工具同款), adapter × line 盲扫只当兜底。
 
 排障: `set DDCCI_BACKEND=gpu && py -3 nanwei_cli.py check`, 开 `set DDCCI_GPU_DEBUG=1`
 看每条通道返回码; 只想试 32 位桥: `set DDCCI_GPU_CHANNELS=nv32`。
@@ -233,7 +234,9 @@ def _enum_nv32_channels(slave=_SLAVE):
 # ============ AMD: atiadlxx.dll ============
 _ADL_I2C_ACTION_READ = 1
 _ADL_I2C_ACTION_WRITE = 2
-_ADL_MAX_I2C_LINES = 8   # 每个 adapter 探测的 I²C line 范围
+_ADL_MAX_I2C_LINES = 8   # 每个 adapter 探测的 I²C line 范围 (盲扫兜底用)
+_ADL_DDC_OPTION_SWITCHDDC2 = 1
+_ADL_DISPLAY_CONNECTED = 1
 
 
 class _AdlI2c(ctypes.Structure):
@@ -249,8 +252,76 @@ class _AdlI2c(ctypes.Structure):
     ]
 
 
+class _AdlDisplayID(ctypes.Structure):
+    _fields_ = [
+        ("iDisplayLogicalIndex", ctypes.c_int),
+        ("iDisplayPhysicalIndex", ctypes.c_int),
+        ("iDisplayLogicalAdapterIndex", ctypes.c_int),
+        ("iDisplayPhysicalAdapterIndex", ctypes.c_int),
+    ]
+
+
+class _AdlDisplayInfo(ctypes.Structure):
+    _fields_ = [
+        ("displayID", _AdlDisplayID),
+        ("iDisplayControllerIndex", ctypes.c_int),
+        ("strDisplayName", ctypes.c_char * 256),
+        ("strDisplayManufacturerName", ctypes.c_char * 256),
+        ("iDisplayType", ctypes.c_int),
+        ("iDisplayOutputType", ctypes.c_int),
+        ("iDisplayConnector", ctypes.c_int),
+        ("iDisplayInfoMask", ctypes.c_int),
+        ("iDisplayInfoValue", ctypes.c_int),
+    ]
+
+
+class _AdlDdcChannel:
+    """AMD 一台已接显示器 = 一条 DDC block 通道 (ADL_Display_DDCBlockAccess_Get)。
+
+    旧工具 (WinI2C-DDC) 在 AMD 上走的就是这条, 2026-07-10 真机验证通过: 整帧含从机
+    地址一起交给驱动, 按显示器定位, 不用猜 I²C line。写 = [slave 51 帧...];
+    读 = 发 [slave|1] 收 n 字节。iOption 两种都试 (不同驱动对 DDC2 开关口味不一)。
+    """
+
+    def __init__(self, adl, adapter, display, name, slave=_SLAVE):
+        self._adl = adl
+        self._adapter = adapter
+        self._display = display
+        self.slave = slave
+        self.read_addr = slave | 1
+        self.framing = "opt0"
+        self.desc = "AMD adapter %d display %d (%s)" % (adapter, display, name)
+
+    def _option(self):
+        return _ADL_DDC_OPTION_SWITCHDDC2 if self.framing == "opt1" else 0
+
+    def i2c_write(self, data):
+        block = [self.slave, _SUB] + list(data)
+        buf = (ctypes.c_ubyte * len(block))(*block)
+        rlen = ctypes.c_int(0)
+        st = self._adl.ADL_Display_DDCBlockAccess_Get(
+            self._adapter, self._display, self._option(), 0,
+            len(block), buf, ctypes.byref(rlen), None)
+        _dbg("adl-ddc write [%s] st=%d", self.framing, st)
+        return st == 0
+
+    def i2c_read(self, n):
+        send = (ctypes.c_ubyte * 1)(self.read_addr)
+        buf = (ctypes.c_ubyte * n)()
+        rlen = ctypes.c_int(n)
+        st = self._adl.ADL_Display_DDCBlockAccess_Get(
+            self._adapter, self._display, self._option(), 0,
+            1, send, ctypes.byref(rlen), buf)
+        _dbg("adl-ddc read [0x%02X] st=%d rlen=%d", self.read_addr, st, rlen.value)
+        if st != 0:
+            return []
+        return list(buf[:max(0, rlen.value)] or buf)
+
+
 class _AdlChannel:
-    """AMD 一个 adapter × 一条 I²C line = 一条候选通道。"""
+    """AMD 一个 adapter × 一条 I²C line = 一条候选通道 (原始 I²C, 盲扫兜底)。"""
+
+    is_fallback = True   # 盲扫: 只有显示器级通道全落空时才试, 否则每次建链白等 8×N 条
 
     def __init__(self, adl, adapter, line, slave=_SLAVE):
         self._adl = adl
@@ -306,7 +377,39 @@ def _enum_adl_channels(slave=_SLAVE):
     n = ctypes.c_int(0)
     adl.ADL_Adapter_NumberOfAdapters_Get(ctypes.byref(n))
     _dbg("adl adapters = %d", n.value)
+    if n.value <= 0:
+        _dbg("ADL 加载 OK 但枚举到 0 个 adapter")
+        return []
     chans = []
+    seen = set()
+    # 首选: 每台已接显示器一条 DDC block 通道 (旧工具同款, 按显示器定位不用猜 line)
+    try:
+        adl.ADL_Display_DisplayInfo_Get.argtypes = [
+            ctypes.c_int, ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.POINTER(_AdlDisplayInfo)), ctypes.c_int]
+        for a in range(n.value):
+            cnt = ctypes.c_int(0)
+            infos = ctypes.POINTER(_AdlDisplayInfo)()
+            st = adl.ADL_Display_DisplayInfo_Get(a, ctypes.byref(cnt), ctypes.byref(infos), 0)
+            if st != 0 or not infos:
+                _dbg("adl DisplayInfo_Get adapter %d st=%d", a, st)
+                continue
+            for j in range(cnt.value):
+                di = infos[j]
+                if not (di.iDisplayInfoValue & _ADL_DISPLAY_CONNECTED):
+                    continue
+                key = (di.displayID.iDisplayPhysicalAdapterIndex,
+                       di.displayID.iDisplayPhysicalIndex)
+                if key in seen:
+                    continue
+                seen.add(key)
+                name = di.strDisplayName.decode("mbcs", "replace").strip("\x00 ")
+                chans.append(_AdlDdcChannel(adl, a, di.displayID.iDisplayLogicalIndex,
+                                            name, slave=slave))
+        _dbg("adl DDC block 通道 = %d", len(chans))
+    except Exception as e:
+        _dbg("adl 显示器枚举异常: %s", e)
+    # 兜底: adapter × line 盲扫 (标了 is_fallback, 首选通道全落空才探)
     for a in range(n.value):
         for line in range(_ADL_MAX_I2C_LINES):
             chans.append(_AdlChannel(adl, a, line, slave=slave))
@@ -349,13 +452,27 @@ def _probe(channel, settle=0.06, retries=2):
     return False
 
 
+def _pick_channels(candidates, settle, fallback_scan=True):
+    """先探显示器级通道 (NV display / AMD DDC block), 全落空才放开盲扫通道。
+
+    盲扫 = AMD adapter × line, 一台机能有几十条, 每条都要发帧等应答; 有显示器级
+    通道时跳过它们, 建链快好几秒 (GUI 的快扫就是 fallback_scan=False)。
+    """
+    primary = [c for c in candidates if not getattr(c, "is_fallback", False)]
+    live = [c for c in primary if _probe(c, settle)]
+    if live or not fallback_scan:
+        return live
+    fallback = [c for c in candidates if getattr(c, "is_fallback", False)]
+    return [c for c in fallback if _probe(c, settle)]
+
+
 class GpuI2CBackend(Backend):
     """显卡原始 I²C 后端 (NVIDIA NVAPI / AMD ADL 自动探测)。"""
 
     name = "gpu"
     address = _SLAVE
 
-    def __init__(self, read_settle=0.06, set_settle=0.06, slave=None):
+    def __init__(self, read_settle=0.06, set_settle=0.06, slave=None, fallback_scan=True):
         # 从机地址: 显式参数 > 环境变量 DDCCI_SLAVE > 模块默认 0x5E (同 rawusb 规则)
         if slave is None:
             slave = int(os.environ.get("DDCCI_SLAVE", "0"), 0) or _SLAVE
@@ -385,7 +502,7 @@ class GpuI2CBackend(Backend):
                     "没找到显卡 I2C 通道 (nvapi64.dll / atiadlxx.dll 加载不了, "
                     "32 位 helper 也没枚举到 display)。确认这台机器有 NVIDIA/AMD 显卡"
                     "且装了官方驱动; 笔记本核显请改用 USB 小板 (DDCCI_BACKEND=rawusb)。")
-            self._chans = [c for c in candidates if _probe(c, self._read_settle)]
+            self._chans = _pick_channels(candidates, self._read_settle, fallback_scan)
             if not self._chans:
                 raise RuntimeError(
                     "显卡通道枚举到 %d 条, 但 0x%02X 都无应答。确认显示器接在这块显卡上、"

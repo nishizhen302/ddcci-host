@@ -52,6 +52,9 @@ const demoBridge = {
     return { ok: true, tx: `5E 51 84 03 ${hex(op)} 00 ${hex(value)} --` };
   },
   async press_key(name) { return { ok: true, tx: `5E 51 84 C0 96 ${name} 00 --` }; },
+  async press_key_raw(value) { return { ok: true, tx: `5E 51 84 C0 96 ${hex(Number(value))} 00 --` }; },
+  async enter_factory() { return { ok: true, keys: ["menu","ok"], tx: "MENU → OK" }; },
+  async start_aging() { return { ok: true, keys: ["menu","ok","menu","menu","right","menu","exit","exit"], tx: "MENU → OK → MENU → MENU → RIGHT → MENU → EXIT → EXIT" }; },
   async minimize_window() { return { ok: true }; },
   async close_window() { return { ok: true }; },
   async start_resize() { return { ok: true }; },
@@ -315,6 +318,50 @@ function bindControls() {
   // 展开/收起任何抽屉 (更多设置 / 图像 / 色彩 / 日志) 后, 窗口高度重新自适应
   document.querySelectorAll("details").forEach((d) =>
     d.addEventListener("toggle", fitWindow));
+
+  // 按键宏: 后端顺序发完整序列 (数秒), 期间按钮置灰防连点
+  [
+    { id: "#factory-btn", api: "enter_factory", label: "工厂菜单宏" },
+    { id: "#aging-btn", api: "start_aging", label: "老化宏" },
+  ].forEach(({ id, api, label }) => {
+    const btn = $(id);
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      const span = btn.querySelector("span");
+      const old = span.textContent;
+      span.textContent = "发送中…";
+      try {
+        const result = await bridge()[api]();
+        log(label, result.tx, result.ok, result.ok ? "序列已发完, 看屏幕" : result.error || "");
+        setConn(result.ok ? "已连接" : `${label}失败: ${result.error || ""}`, result.ok ? "ok" : "warn");
+      } finally {
+        span.textContent = old;
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // 自定义键值 (逆向 OK 等 PDF 未列出的键: 逐个值试, 看 OSD 反应)
+  const rawSend = $("#raw-key-send");
+  if (rawSend) {
+    const sendRaw = async () => {
+      const text = ($("#raw-key").value || "").trim();
+      const value = Number(text.startsWith("0x") || text.startsWith("0X") ? text : "0x" + text);
+      if (!Number.isInteger(value) || value < 0 || value > 255) {
+        log("自定义键值", "", false, `无效键值 "${text}" (要 00~FF)`);
+        return;
+      }
+      const result = await bridge().press_key_raw(value);
+      log(`键值 0x${hex(value)}`, result.tx, result.ok, result.ok ? "" : result.error || "");
+      setConn(result.ok ? "已连接" : `发送失败: ${result.error || ""}`, result.ok ? "ok" : "warn");
+    };
+    rawSend.addEventListener("click", sendRaw);
+    $("#raw-key").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") sendRaw();
+    });
+  }
 
   $$(".key-grid button").forEach((button) => {
     button.addEventListener("click", async () => {

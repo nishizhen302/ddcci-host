@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DDCCI控制台</title>
-  <link rel="stylesheet" href="style.css?v=20260710e">
+  <link rel="stylesheet" href="style.css?v=20260728a">
 </head>
 <body data-theme="light">
   <div class="resz t"  data-ht="12"></div>
@@ -60,6 +60,22 @@
         <button type="button" data-key="left">LEFT</button>
         <button type="button" data-key="right">RIGHT</button>
         <button type="button" data-key="exit">EXIT</button>
+      </div>
+      <div class="macro-row">
+        <button id="factory-btn" class="macro-btn" type="button">
+          <span>进入工厂菜单</span>
+          <b>MENU→OK</b>
+        </button>
+        <button id="aging-btn" class="macro-btn" type="button">
+          <span>开启老化</span>
+          <b>工厂菜单→老化</b>
+        </button>
+      </div>
+      <div class="raw-key-row">
+        <label for="raw-key">自定义键值</label>
+        <input id="raw-key" type="text" value="0x04" inputmode="text"
+               spellcheck="false" aria-label="自定义键值 (十六进制)">
+        <button id="raw-key-send" type="button">发送</button>
       </div>
     </section>
 
@@ -145,6 +161,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20260710e"></script>
+  <script src="app.js?v=20260728a"></script>
 </body>
 </html>

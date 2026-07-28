@@ -11,12 +11,16 @@
 | 亮度 / 对比度 | 0x10 / 0x12 | 0x00~0x64 |
 | 色温 | 0x14 | User=0x05, 9300K=0x06, 6500K=0x08 |
 | Gamma | 0x72 | gamma1~7 = 0x06~0x0C |
-| 模拟按键 | 0x96 (命令字 **0xC0**，非 SET VCP) | Menu=0, Right=1, Left=2, Exit=3，键值在高字节 |
+| 模拟按键 | 0x96 (命令字 **0xC0**，非 SET VCP) | Menu=0, Right=1, Left=2, Exit=3, **OK=4**，键值在高字节 |
 | 硬件 / 软件版本 | 0xE0 / 0xC9 | 只读 |
 
 - 写：`5E 51 84 03 op hi lo chk`，chk = 前 7 字节异或
 - 读：`5E 51 82 01 op chk` → 等 >40ms → 从 0x5F 读 11 字节，chk2 = 前 10 字节异或 ^ 0x50
 - 按键：`5E 51 84 C0 96 key 00 chk`（无回读）
+- **OK=0x04 是 2026-07-10 真机逐值试出来的，PDF 未收录**；GUI「自定义键值」行就是干这个用的
+- 按键宏（PDF 没有对应命令，只能模拟 OSD 操作顺序走进去，键间隔 0.35s）：
+  - 进工厂菜单 = `Menu → OK`
+  - 开启老化 = 进工厂菜单后再 `Menu → Menu → Right → Menu → Exit → Exit`
 
 ## 用法
 
@@ -24,7 +28,9 @@
 nanwei-console.bat              # GUI 控制台 (默认 USB 小板后端)
 py -3 nanwei_cli.py check       # 链路自检: 版本 + 四参数各读一次
 py -3 nanwei_cli.py set brightness 50
-py -3 nanwei_cli.py key menu
+py -3 nanwei_cli.py key menu    # 也收键值: key 0x04 (逆向 PDF 没列的键)
+py -3 nanwei_cli.py factory     # 按键宏: Menu→OK 进工厂菜单
+py -3 nanwei_cli.py aging       # 按键宏: 进工厂菜单后一路进老化
 
 rem 台式机上切显卡通道:
 set DDCCI_BACKEND=gpu

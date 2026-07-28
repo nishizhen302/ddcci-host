@@ -568,6 +568,94 @@ button {
   transform: translateY(0) scale(.97);
 }
 
+/* 按键宏行: 进入工厂菜单 / 开启老化 并排 */
+.macro-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.macro-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  background: var(--accent-soft);
+  color: color-mix(in srgb, var(--accent) 82%, var(--text));
+  transition: transform .16s var(--ease), border-color .16s var(--ease), opacity .16s var(--ease);
+}
+
+.macro-btn span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+
+.macro-btn b {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--subtle);
+  letter-spacing: .02em;
+}
+
+.macro-btn:hover { transform: translateY(-1px); border-color: var(--line-strong); }
+.macro-btn:active { transform: translateY(0) scale(.98); }
+.macro-btn:disabled { opacity: .55; transform: none; cursor: default; }
+
+/* 自定义键值行: 逆向 OK 等未知键时逐值试发 */
+.raw-key-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.raw-key-row label {
+  font-size: 11px;
+  color: var(--subtle);
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.raw-key-row input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--window) 84%, transparent);
+  color: var(--text);
+  font: 600 12px/1 ui-monospace, Consolas, monospace;
+  letter-spacing: .06em;
+}
+
+.raw-key-row input:focus {
+  outline: none;
+  border-color: var(--line-strong);
+}
+
+.raw-key-row button {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--accent-soft);
+  color: color-mix(in srgb, var(--accent) 78%, var(--text));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  transition: transform .16s var(--ease), border-color .16s var(--ease);
+}
+
+.raw-key-row button:hover { transform: translateY(-1px); border-color: var(--line-strong); }
+.raw-key-row button:active { transform: translateY(0) scale(.97); }
+
 .log-drawer {
   margin-top: 10px;
   border-radius: 15px;
