@@ -16,6 +16,29 @@
   --shadow: 0 22px 70px rgba(68, 91, 120, .25);
   --small-shadow: 0 9px 30px rgba(92, 113, 139, .16);
   --blur: blur(24px) saturate(1.25);
+
+  /* color-mix() 的预计算等价值 —— Win7 版走 QtWebEngine(Chromium 83), 不认 color-mix,
+     整条声明会被丢弃。每处 color-mix 前面都垫一条用这些变量的 fallback: 老内核只解析得了
+     fallback, 新内核(WebView2)后一条覆盖 → 两边像素一致。值是按 srgb 预乘算好的, 改主题色
+     记得连这里一起改。命名 = 源变量-百分比。 */
+  --bg-tint: #ecf1f7;                     /* bg 84% + #fff */
+  --muted-55: rgba(148, 160, 174, .55);
+  --accent-70: rgba(37, 198, 160, .7);
+  --accent-28: rgba(37, 198, 160, .28);
+  --win-62: rgba(250, 252, 255, .508);
+  --win-78: rgba(250, 252, 255, .64);
+  --win-82: rgba(250, 252, 255, .672);
+  --win-84: rgba(250, 252, 255, .689);
+  --win-88: rgba(250, 252, 255, .722);
+  --wins-72: rgba(255, 255, 255, .662);
+  --wins-86: rgba(255, 255, 255, .791);
+  --wins-94: rgba(255, 255, 255, .865);
+  --track-38: rgba(220, 229, 238, .38);
+  --track-42: rgba(220, 229, 238, .42);
+  --accent-txt-72: #1f957e;               /* accent 72% + text */
+  --accent-txt-78: #21a085;
+  --accent-txt-82: #21a78a;
+  --accent-line-42: rgba(48, 180, 154, .524);
 }
 
 [data-theme="dark"] {
@@ -33,6 +56,25 @@
   --accent-soft: rgba(62, 227, 176, .13);
   --shadow: 0 24px 80px rgba(0, 0, 0, .42);
   --small-shadow: 0 10px 34px rgba(0, 0, 0, .25);
+
+  --bg-tint: #353a3f;
+  --muted-55: rgba(100, 114, 131, .55);
+  --accent-70: rgba(62, 227, 176, .7);
+  --accent-28: rgba(62, 227, 176, .28);
+  --win-62: rgba(22, 27, 36, .508);
+  --win-78: rgba(22, 27, 36, .64);
+  --win-82: rgba(22, 27, 36, .672);
+  --win-84: rgba(22, 27, 36, .689);
+  --win-88: rgba(22, 27, 36, .722);
+  --wins-72: rgba(27, 34, 45, .662);
+  --wins-86: rgba(27, 34, 45, .791);
+  --wins-94: rgba(27, 34, 45, .865);
+  --track-38: rgba(38, 49, 65, .38);
+  --track-42: rgba(38, 49, 65, .42);
+  --accent-txt-72: #6fe8c6;
+  --accent-txt-78: #65e7c1;
+  --accent-txt-82: #5ee6be;
+  --accent-line-42: rgba(81, 228, 186, .478);
 }
 
 * { box-sizing: border-box; }
@@ -60,6 +102,9 @@ button {
   flex-direction: column;
   background:
     radial-gradient(circle at 20% 0%, rgba(50, 183, 232, .22), transparent 34%),
+    linear-gradient(150deg, var(--bg), var(--bg-tint));
+  background:
+    radial-gradient(circle at 20% 0%, rgba(50, 183, 232, .22), transparent 34%),
     linear-gradient(150deg, var(--bg), color-mix(in srgb, var(--bg) 84%, #fff));
   transition: background .32s var(--ease);
 }
@@ -74,6 +119,7 @@ button {
 }
 .scroll::-webkit-scrollbar { width: 9px; }
 .scroll::-webkit-scrollbar-thumb {
+  background: var(--muted-55);
   background: color-mix(in srgb, var(--muted) 55%, transparent);
   border-radius: 999px;
   border: 3px solid transparent;
@@ -127,6 +173,7 @@ button {
   height: 9px;
   border-radius: 50%;
   background: var(--accent);
+  box-shadow: 0 0 0 5px var(--accent-soft), 0 0 18px var(--accent-70);
   box-shadow: 0 0 0 5px var(--accent-soft), 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 
@@ -140,6 +187,7 @@ button {
   width: 28px;
   height: 28px;
   border-radius: 8px;
+  background: var(--wins-86);
   background: color-mix(in srgb, var(--window-strong) 86%, transparent);
   border: 1px solid var(--line);
   color: var(--subtle);
@@ -225,6 +273,7 @@ button {
   padding: 7px 34px 7px 12px;
   border: 1px solid var(--line-strong);
   border-radius: 11px;
+  background: var(--win-62);
   background: color-mix(in srgb, var(--window) 62%, transparent);
   transition: border-color .16s var(--ease), background .16s var(--ease);
 }
@@ -234,6 +283,7 @@ button {
 
 .target-picker summary:hover {
   border-color: var(--accent);
+  background: var(--win-88);
   background: color-mix(in srgb, var(--window) 88%, transparent);
 }
 
@@ -265,6 +315,7 @@ button {
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 16px;
+  background: var(--wins-94);
   background: color-mix(in srgb, var(--window-strong) 94%, transparent);
   box-shadow: 0 18px 46px rgba(64, 83, 105, .24);
   backdrop-filter: var(--blur);
@@ -286,6 +337,7 @@ button {
 
 .target-option:hover {
   transform: translateY(-1px);
+  background: var(--track-38);
   background: color-mix(in srgb, var(--track) 38%, transparent);
 }
 
@@ -313,6 +365,7 @@ button {
   display: grid;
   place-items: center;
   border-radius: 999px;
+  background: var(--win-78);
   background: color-mix(in srgb, var(--window) 78%, transparent);
   color: var(--subtle);
   font-size: 10px;
@@ -344,6 +397,7 @@ button {
   padding: 0 9px;
   border-radius: 999px;
   background: var(--accent-soft);
+  color: var(--accent-txt-72);
   color: color-mix(in srgb, var(--accent) 72%, var(--text));
   font-weight: 650;
   font-size: 11px;
@@ -429,6 +483,7 @@ button {
   height: 28px;
   border-radius: 9px;
   border: 1px solid var(--line);
+  background: var(--win-82);
   background: color-mix(in srgb, var(--window) 82%, transparent);
   color: var(--subtle);
   font-size: 17px;
@@ -453,7 +508,7 @@ button {
 
 .meter input {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   z-index: 2;
   width: 100%;
   opacity: 0;
@@ -505,6 +560,7 @@ button {
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 13px;
+  background: var(--track-42);
   background: color-mix(in srgb, var(--track) 42%, transparent);
 }
 
@@ -522,6 +578,7 @@ button {
 .seg button.active {
   color: white;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 8px 18px var(--accent-28);
   box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
@@ -549,6 +606,7 @@ button {
   height: 36px;
   border-radius: 12px;
   border: 1px solid var(--line);
+  background: var(--win-84);
   background: color-mix(in srgb, var(--window) 84%, transparent);
   color: var(--subtle);
   font-size: 11px;
@@ -558,6 +616,7 @@ button {
 }
 
 .key-grid button:first-child {
+  color: var(--accent-txt-78);
   color: color-mix(in srgb, var(--accent) 78%, var(--text));
   background: var(--accent-soft);
 }
@@ -583,8 +642,10 @@ button {
   gap: 3px;
   padding: 8px 10px;
   border-radius: 12px;
+  border: 1px solid var(--accent-line-42);
   border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
   background: var(--accent-soft);
+  color: var(--accent-txt-82);
   color: color-mix(in srgb, var(--accent) 82%, var(--text));
   transition: transform .16s var(--ease), border-color .16s var(--ease), opacity .16s var(--ease);
 }
@@ -629,6 +690,7 @@ button {
   padding: 0 10px;
   border-radius: 10px;
   border: 1px solid var(--line);
+  background: var(--win-84);
   background: color-mix(in srgb, var(--window) 84%, transparent);
   color: var(--text);
   font: 600 12px/1 ui-monospace, Consolas, monospace;
@@ -646,6 +708,7 @@ button {
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--accent-soft);
+  color: var(--accent-txt-78);
   color: color-mix(in srgb, var(--accent) 78%, var(--text));
   font-size: 11px;
   font-weight: 700;
@@ -707,6 +770,7 @@ button {
 .more-body .log-drawer {
   margin-top: 8px;
   box-shadow: none;
+  background: var(--wins-72);
   background: color-mix(in srgb, var(--window-strong) 72%, transparent);
 }
 
@@ -746,3 +810,19 @@ button {
   .setting { grid-template-columns: 1fr; }
   .key-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ============================================================
+   Win7 / QtWebEngine (Chromium 83) flex-gap 兼容补丁
+   Chromium <84 不支持 flex 容器的 gap (grid 的 gap 不受影响, 不用管)。
+   下面把受影响的 flex 间距改用等效 margin 复刻; 同时把这些容器的 gap 归 0,
+   避免在支持 gap 的内核 (Win11 WebView2) 上叠成双倍间距 ⇒ 两边视觉一致。
+   ============================================================ */
+.brand, .title-actions, .target-option, .chip-row, .seg, .macro-btn, .raw-key-row { gap: 0; }
+
+.brand > * + *          { margin-left: 10px; }
+.title-actions > * + *  { margin-left: 7px; }
+.target-option > * + *  { margin-left: 12px; }
+.chip-row > * + *       { margin-left: 7px; }
+.seg > * + *            { margin-left: 4px; }
+.macro-btn > * + *      { margin-top: 3px; }   /* 纵向 flex */
+.raw-key-row > * + *    { margin-left: 7px; }

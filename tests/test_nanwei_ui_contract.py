@@ -38,6 +38,45 @@ def test_nanwei_ui_keeps_macro_buttons_next_to_osd_keys():
     assert html.index('class="macro-row"') < html.index('class="more-drawer"')
 
 
+def _css():
+    return (ROOT / "ui" / "nanwei" / "style.css").read_text(encoding="utf-8")
+
+
+def test_every_color_mix_has_a_win7_fallback_in_front():
+    """Win7 版走 QtWebEngine(Chromium 83), 不认 color-mix(), 整条声明会被丢弃。
+
+    约定: 每条含 color-mix 的声明前面必须紧挨一条同属性的 fallback 声明 (用 :root 里
+    预计算好的变量)。新写样式时忘了垫 fallback = Win7 上那处颜色直接没有, 这里拦住。
+    """
+    import re
+    css = re.sub(r"/\*.*?\*/", "", _css(), flags=re.S)          # 注释里提到 color-mix 不算
+    # 按 ; 切成声明 (多行简写也能整条拿到), 每条取属性名
+    decls = [d.strip() for d in css.replace("{", ";").replace("}", ";").split(";")]
+    decls = [" ".join(d.split()) for d in decls if ":" in d]
+    missing = []
+    for i, decl in enumerate(decls):
+        if "color-mix" not in decl or decl.startswith("--"):
+            continue
+        prop = decl.split(":", 1)[0].strip()
+        prev = decls[i - 1] if i else ""
+        if not prev.startswith(prop + ":") or "color-mix" in prev:
+            missing.append(decl)
+    assert not missing, "这些 color-mix 声明缺 Win7 fallback: %r" % missing
+
+
+def test_flex_gap_containers_are_patched_for_win7():
+    """Chromium 83 不支持 flex 容器的 gap (grid 的不受影响)。
+
+    样式表末尾的补丁把这些容器 gap 归 0 + 改 margin 复刻; 少一个 = Win7 上那处挤成一团。
+    """
+    css = _css()
+    flex_gap_containers = [".brand", ".title-actions", ".target-option",
+                           ".chip-row", ".seg", ".macro-btn", ".raw-key-row"]
+    patch = css[css.index("flex-gap 兼容补丁"):]
+    for sel in flex_gap_containers:
+        assert sel in patch, "%s 没进 Win7 flex-gap 补丁" % sel
+
+
 def test_nanwei_ui_hides_image_color_and_log_under_more_settings():
     html = _html()
     assert 'class="more-drawer"' in html

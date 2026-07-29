@@ -281,6 +281,19 @@ function bindControls() {
       bridge().start_resize(Number(el.dataset.ht));
     });
   });
+  // 标题栏拖动: WebView2(Win11) 由 pywebview-drag-region 原生处理;
+  // QtWebEngine(Win7) 后端不认 drag-region, 这里手动用 HTCAPTION(2) 走系统移动循环。
+  if (navigator.userAgent.indexOf("QtWebEngine") >= 0) {
+    const HTCAPTION = 2;
+    $$(".pywebview-drag-region").forEach((bar) => {
+      bar.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0) return;
+        if (event.target.closest(".pywebview-no-drag")) return;  // 窗口按钮簇不触发拖动
+        event.preventDefault();
+        bridge().start_resize(HTCAPTION);
+      });
+    });
+  }
 
   ["brightness", "contrast"].forEach((id) => {
     const input = $(`#${id}`);

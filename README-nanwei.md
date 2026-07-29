@@ -41,6 +41,40 @@ py -3 nanwei_cli.py nvscan            # helper 起没起来 / 枚举到几块屏
 py -3 nanwei_cli.py nvshort 0x400 30  # 发短帧亮度 (90 val chk), 看屏亮度变不变
 ```
 
+## 两个交付包
+
+同一份代码，只有 pywebview 的渲染后端不同：
+
+| | Win10/11 版 | Win7 版 |
+|---|---|---|
+| spec | `DDCCI-Nanwei.spec` | `Nanwei-Win7.spec` |
+| 入口 | `app_nanwei.py` | `app_nanwei_win7.py`（设 `DDCCI_GUI=qt` + 高 DPI 处理后转 `app_nanwei`）|
+| 渲染 | 系统 WebView2（目标机要装运行时）| PyQt5 + QtWebEngine 自带 Chromium 83，**目标机零依赖** |
+| Python | 3.12 | **3.8**（Win7 支持的最后一版）|
+| 体积 | ~20 MB | ~300 MB |
+
+```powershell
+rem Win10/11 版
+py -3.12 -m PyInstaller --noconfirm --clean DDCCI-Nanwei.spec
+
+rem Win7 版 (首次先建环境)
+py -3.8 -m venv .venv38
+.\.venv38\Scripts\python.exe -m pip install PyQt5==5.15.2 PyQtWebEngine==5.15.2 qtpy pywebview==5.4 pyinstaller==6.20.0
+.\.venv38\Scripts\pyinstaller.exe --noconfirm --clean --distpath dist-win7 --workpath build-win7 Nanwei-Win7.spec
+```
+
+Win7 版的前端兼容（Chromium 83 比 WebView2 老十几个版本，两处会直接失效）：
+
+- **`color-mix()`**（Chromium 111+）：`ui/nanwei/style.css` 里每条 color-mix 前面垫了一条
+  预计算好的等价 fallback（`:root` / `[data-theme=dark]` 末尾那批 `--win-62` 之类变量）。
+  老内核只解析得了 fallback，新内核后一条覆盖 ⇒ 两边像素一致。**改主题色要连这批变量一起改。**
+- **flex 容器的 `gap`**（Chromium 84+）：样式表末尾的兼容补丁把受影响的 flex 容器 gap 归 0、
+  改用等效 margin 复刻（grid 的 gap 不受影响，不用管）。
+- 另外 `app.js` 里检测到 `QtWebEngine` 时手挂标题栏拖动 —— Qt 后端不认 `pywebview-drag-region`。
+
+想在本机就验 Win7 的排版，不必装机：用 `.venv38` 的 PyQt5（同一个 Chromium 83）把
+`ui/nanwei/index.html` 渲出来截图即可。
+
 ## 分层
 
 - `nanwei_core.py` — 协议语义（操作码 / 值表 / 按键帧 / 设备封装），纯逻辑可单测
