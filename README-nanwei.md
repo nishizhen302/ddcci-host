@@ -41,6 +41,16 @@ py -3 nanwei_cli.py nvscan            # helper 起没起来 / 枚举到几块屏
 py -3 nanwei_cli.py nvshort 0x400 30  # 发短帧亮度 (90 val chk), 看屏亮度变不变
 ```
 
+## 版本号 / 检查更新
+
+标题栏标题右边那个小 `v62` 就是版本号 = **git 提交数**（`rev-list --count HEAD`），单调递增，
+不用手工维护。打包时由 spec 生成 `_build_info.py` 焊进 exe（exe 里没有 `.git`）；源码直接跑
+则现场问 git。点一下版本号：有新版就打开仓库，没有就重新检查一次。
+
+对比的是 **`feat/phytune-p0` 分支**（master 是 dxva2 那版旧控制台，别对错）。产线机器多半没网，
+查不到只改 tooltip 不打扰；本机提交还没推送时远端查不到那个 sha，会明说"未推送无法比对"，
+**不谎报有更新**。实现在 `version.py` + `app_nanwei.py` 的 `app_version/check_update/open_repo`。
+
 ## 两个交付包
 
 同一份代码，只有 pywebview 的渲染后端不同：

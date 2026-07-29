@@ -16,12 +16,33 @@
 产物: dist/DDCCI-Nanwei/DDCCI-Nanwei.exe (排除后约 20MB 量级)
 """
 
+# 构建前把当前 git 版本焊进 _build_info.py (版本号 = 提交数), 供标题栏显示 + 检查更新。
+# exe 里没有 .git, version.py 现场问 git 那条路走不通, 只能打包时固化。
+import datetime as _dt
+import subprocess as _sp
+
+
+def _git(args):
+    try:
+        return _sp.run(['git'] + args, capture_output=True, text=True).stdout.strip()
+    except Exception:
+        return ''
+
+
+with open('_build_info.py', 'w', encoding='utf-8') as _f:
+    _f.write(
+        '# 由 spec 在打包时生成, 不要手改, 也不入库 (见 .gitignore)\n'
+        'VERSION = "%s"\n' % (_git(['rev-list', '--count', 'HEAD']) or '?') +
+        'SHA = "%s"\n' % _git(['rev-parse', '--short', 'HEAD']) +
+        'SHA_FULL = "%s"\n' % _git(['rev-parse', 'HEAD']) +
+        'DATE = "%s"\n' % _dt.date.today().isoformat())
+
 a = Analysis(
     ['app_nanwei.py'],
     pathex=[],
     binaries=[],
     datas=[('ui/nanwei', 'ui/nanwei'), ('tools/nvddc32.exe', '.')],
-    hiddenimports=[],
+    hiddenimports=['_build_info'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

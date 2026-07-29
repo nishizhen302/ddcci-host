@@ -58,6 +58,9 @@ const demoBridge = {
   async minimize_window() { return { ok: true }; },
   async close_window() { return { ok: true }; },
   async start_resize() { return { ok: true }; },
+  async app_version() { return { ok: true, version: "0", sha: "demo", date: "", source: "demo" }; },
+  async check_update() { return { ok: true, current: "0", has_update: false, behind_by: 0, error: null }; },
+  async open_repo() { return { ok: true }; },
 };
 
 function bridge() {
@@ -82,6 +85,43 @@ function log(label, tx, ok = true, extra = "") {
     `<code>${tx || ""}</code>`;
   box.prepend(row);
   while (box.children.length > 80) box.removeChild(box.lastChild);
+}
+
+// ---- 版本号 / 检查更新 ----
+// 版本 = git 提交数, 打包时焊进 exe (version.py)。标题栏那个小 v 数字: 有新版变强调色,
+// 点一下打开仓库; 没新版点一下重新检查。产线机器多半没网, 失败只改 tooltip, 不打扰。
+let UPDATE_INFO = null;
+
+async function initVersion() {
+  const label = $("#ver-label");
+  try {
+    const info = await bridge().app_version();     // 不联网, 先把版本号显示出来
+    if (info && info.version) label.textContent = "v" + info.version;
+  } catch (e) { /* 桥没起来就保持 v… */ }
+  await checkUpdate(false);
+}
+
+async function checkUpdate(manual) {
+  const label = $("#ver-label");
+  if (manual) label.textContent = "检查中…";
+  let result;
+  try {
+    result = await bridge().check_update();
+  } catch (e) {
+    result = { error: "检查失败" };
+  }
+  UPDATE_INFO = result;
+  if (result.current) label.textContent = "v" + result.current;
+  label.classList.toggle("update", !!result.has_update);
+  if (result.error) {
+    label.title = result.error + " (点击重试)";
+  } else if (result.has_update) {
+    label.title = `远端已更新, 落后 ${result.behind_by} 个提交 · 点击打开仓库`;
+    log("检查更新", "", true, `有新版本, 落后 ${result.behind_by} 个提交`);
+  } else {
+    label.title = `已是最新版 v${result.current} (点击重新检查)`;
+    if (manual) log("检查更新", "", true, "已是最新版");
+  }
 }
 
 // 窗口高度自适应内容: 测「标题栏 + 滚动区内容真实高」, 让 Python resize 窗口到该高度。
@@ -273,6 +313,10 @@ function bindControls() {
     applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
   });
   $("#win-refresh").addEventListener("click", refresh);
+  $("#ver-label").addEventListener("click", () => {
+    if (UPDATE_INFO && UPDATE_INFO.has_update) bridge().open_repo();
+    else checkUpdate(true);
+  });
   $("#win-min").addEventListener("click", () => bridge().minimize_window());
   $("#win-close").addEventListener("click", () => bridge().close_window());
   $$(".resz").forEach((el) => {
@@ -400,7 +444,8 @@ let CONNECTED = false;
 function connectBackend() {
   if (CONNECTED) return;
   CONNECTED = true;
-  refresh();
+  // 先扫链路 (用户真正等的), 扫完再查版本 —— 检查更新最多要等 6 秒网络超时, 不能挡在前面。
+  refresh().then(initVersion, initVersion);
 }
 function bridgeReady() {
   return !!(window.pywebview && window.pywebview.api);

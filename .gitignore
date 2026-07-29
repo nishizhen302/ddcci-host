@@ -9,6 +9,9 @@ dist/
 build-win7/
 dist-win7/
 
+# 打包时由 spec 生成的版本信息 (版本号=提交数, 入库会自我循环)
+_build_info.py
+
 # 临时自测截图
 _*.png
 

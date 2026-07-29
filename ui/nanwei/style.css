@@ -161,6 +161,27 @@ button {
   letter-spacing: .01em;
 }
 
+/* 版本号 = git 提交数, 紧跟标题。点一下检查更新; 远端有新版就变强调色 + 挂个小圆点 */
+.brand .ver {
+  font-size: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color .15s var(--ease);
+}
+.brand .ver:hover { color: var(--text); }
+.brand .ver.update { color: var(--accent); font-weight: 600; }
+.brand .ver.update::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
 /* 「已连接」等状态紧跟标题右侧同一行, 让标题栏保持单行矮高度 */
 .brand #conn {
   color: var(--muted);
@@ -820,6 +841,7 @@ button {
 .brand, .title-actions, .target-option, .chip-row, .seg, .macro-btn, .raw-key-row { gap: 0; }
 
 .brand > * + *          { margin-left: 10px; }
+.brand .ver             { margin-left: 5px; }  /* 版本号紧跟标题, 不占整格 */
 .title-actions > * + *  { margin-left: 7px; }
 .target-option > * + *  { margin-left: 12px; }
 .chip-row > * + *       { margin-left: 7px; }

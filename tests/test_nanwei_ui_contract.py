@@ -38,6 +38,17 @@ def test_nanwei_ui_keeps_macro_buttons_next_to_osd_keys():
     assert html.index('class="macro-row"') < html.index('class="more-drawer"')
 
 
+def test_nanwei_ui_shows_version_in_titlebar():
+    """标题栏版本号是判断"现场那台机器跑的是哪一版"的唯一手段, 别被布局重构顺手删掉。"""
+    html = _html()
+    assert 'id="ver-label"' in html
+    # 必须标 no-drag: 标题栏整条是拖动区, 不排除就点不出"检查更新"
+    assert html.index('id="ver-label"') < html.index('id="conn"')
+    ver_tag = html[html.index('<span id="ver-label"'):]
+    ver_tag = ver_tag[:ver_tag.index(">")]
+    assert "pywebview-no-drag" in ver_tag
+
+
 def _css():
     return (ROOT / "ui" / "nanwei" / "style.css").read_text(encoding="utf-8")
 

@@ -27,11 +27,33 @@
 
 from PyInstaller.utils.hooks import collect_all
 
+# 构建前把当前 git 版本焊进 _build_info.py (版本号 = 提交数), 供标题栏显示 + 检查更新。
+# 与 DDCCI-Nanwei.spec 同一段, 两个包版本号一致。
+import datetime as _dt
+import subprocess as _sp
+
+
+def _git(args):
+    try:
+        return _sp.run(['git'] + args, capture_output=True, text=True).stdout.strip()
+    except Exception:
+        return ''
+
+
+with open('_build_info.py', 'w', encoding='utf-8') as _f:
+    _f.write(
+        '# 由 spec 在打包时生成, 不要手改, 也不入库 (见 .gitignore)\n'
+        'VERSION = "%s"\n' % (_git(['rev-list', '--count', 'HEAD']) or '?') +
+        'SHA = "%s"\n' % _git(['rev-parse', '--short', 'HEAD']) +
+        'SHA_FULL = "%s"\n' % _git(['rev-parse', 'HEAD']) +
+        'DATE = "%s"\n' % _dt.date.today().isoformat())
+
 # 把整个 PyQt5 (含 QtWebEngineProcess.exe、qtwebengine_resources.pak、icudtl.dat、
 # locales、translations 等运行时资源) 完整收进来, 避免目标机白屏。
 pyqt_datas, pyqt_binaries, pyqt_hidden = collect_all('PyQt5')
 
 hiddenimports = [
+    '_build_info',
     'webview.platforms.qt',
     'qtpy',
     'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',

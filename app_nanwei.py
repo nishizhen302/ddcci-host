@@ -8,11 +8,16 @@
 
 运行: py -3 app_nanwei.py   (或 南微控制台.bat)
 """
+import json
 import os
 import sys
+import urllib.error
+import urllib.request
+import webbrowser
 
 import webview
 
+import version
 import winchrome  # 共享无边框窗口样式/缩放机制, 避免拉入其它界面依赖
 from ddcci_core import select_backend
 import nanwei_core as nw
@@ -236,6 +241,63 @@ class Api:
                 "gamma": nw.GAMMA_VALUES,
                 "ops": {"brightness": nw.OP_BRIGHTNESS, "contrast": nw.OP_CONTRAST,
                         "colortemp": nw.OP_COLORTEMP, "gamma": nw.OP_GAMMA}}
+
+    # ---- 版本 / 检查更新 (仓库公开, 匿名对比 GitHub) ----
+    def app_version(self):
+        """本机版本, 不联网 —— 标题栏先把版本号显示出来, 别干等联网那 6 秒超时。"""
+        info = version.get_local()
+        return {"ok": True, "version": info["version"], "sha": info["sha"],
+                "date": info["date"], "source": info["source"]}
+
+    def _gh_json(self, url):
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "DDCCI-Nanwei-UpdateCheck",
+            "Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            return json.loads(r.read().decode("utf-8"))
+
+    def check_update(self):
+        """对比本机打包时的提交与远端分支最新提交。
+
+        产线机器多半没网, 所以任何失败都只填 error 让前端安静显示版本号, 不弹错。
+        """
+        info = version.get_local()
+        result = {"ok": True, "current": info["version"], "sha": info["sha"],
+                  "date": info["date"], "has_update": False, "behind_by": 0,
+                  "latest_sha": "", "url": version.REPO_URL, "error": None}
+        sha_full = info.get("sha_full")
+        if not sha_full:
+            result["error"] = "无法确定当前版本 (这份源码没有 git 记录)"
+            return result
+        try:
+            latest = self._gh_json("https://api.github.com/repos/%s/commits/%s"
+                                   % (version.REPO, version.BRANCH))
+            latest_sha = latest.get("sha", "")
+            result["latest_sha"] = latest_sha[:7]
+            if latest_sha and latest_sha != sha_full:
+                try:
+                    cmp = self._gh_json(
+                        "https://api.github.com/repos/%s/compare/%s...%s"
+                        % (version.REPO, sha_full, latest_sha))
+                    if cmp.get("status") in ("ahead", "diverged"):
+                        result["has_update"] = True
+                        result["behind_by"] = cmp.get("ahead_by", 0)
+                except Exception:
+                    # 比不了几乎都是"本机这个提交还没推上去"(远端根本没有这个 sha)。
+                    # 那是开发版跑在前面, 不是落后 —— 别谎报有更新。
+                    result["error"] = "本机版本未推送到远端, 无法比对"
+        except urllib.error.URLError:
+            result["error"] = "网络不可用, 暂时无法检查更新"
+        except Exception as e:
+            result["error"] = "检查失败: %s" % type(e).__name__
+        return result
+
+    def open_repo(self):
+        try:
+            webbrowser.open(version.REPO_URL)
+            return {"ok": True}
+        except Exception as e:
+            return _err(e)
 
     # ---- 无边框窗口控制 (同 app.py) ----
     def minimize_window(self):
