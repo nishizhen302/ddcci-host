@@ -53,6 +53,18 @@ class Api:
             raise RuntimeError("尚未建链, 先 connect + select_monitor")
         return self._dev
 
+    def shutdown(self):
+        """放掉长期持有的后端 (gpu 后端会顺带关掉 32 位 helper 子进程)。
+
+        关窗时必须调 —— 不调就留一个 nvddc32.exe 在任务管理器里 (2026-07-30 实遇)。
+        """
+        be, self._be, self._dev = self._be, None, None
+        if be is not None:
+            try:
+                be.close()
+            except Exception:
+                pass
+
     # ---- 连接 / 选显示器 ----
     def discover_targets(self):
         """扫描可用控制路径。地址 0x5E/0x6E 自动探测, UI 只选择路径。
@@ -355,7 +367,15 @@ def main():
             QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
         except Exception:
             pass
-    webview.start(func, gui=gui, debug="--debug" in sys.argv)
+    try:
+        webview.start(func, gui=gui, debug="--debug" in sys.argv)
+    finally:
+        api.shutdown()
+    # 关窗后硬退: QtWebEngine (Win7 版) 的渲染器进程和 Qt 自己的清理线程会让
+    # 主进程赖着不走, 任务管理器里就攒下一堆。后端已在上面关干净, 这里直接退。
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

@@ -7,8 +7,12 @@
  * 2026-07-24 实机验证出来的配方（改一处就不通，别乱动）：
  *   - 32 位 nvapi.dll + NV_I2C_INFO_V1(version = sizeof|1<<16, 32 位下 = 0x00010020)
  *   - 非 Ex 的 NvAPI_I2CWrite/I2CRead (ID 0xE812EB07 / 0x2FDE12C5)
- *   - handle 参数传"第一块 display 的 displayMask 值"(实机 0x100)，不是
- *     EnumNvidiaDisplayHandle 返回的 0xDE0000xx 句柄(那样恒 -8)
+ *   - handle 参数不是 EnumNvidiaDisplayHandle 返回的 0xDE0000xx 句柄(那样恒 -8)。
+ *     2026-07-24 抓包那台机上是 0x100，当时枚举到两块屏(0x100/0x400)，于是错记成
+ *     "第一块 display 的 displayMask"。2026-07-30 只接一块屏(枚举只剩 0x400)时
+ *     handle=0x400 恒 -8，整条通道看着像死了。现在改成开机探测(见 pick_handle)：
+ *     逐个候选写一字节到 0xA0，返回码不是 -8 就是今天可用的 handle。
+ *     排障看 `hscan`；`NVDDC32_HANDLE=<hex>` 或 serve 的 `h <hex>` 可强制指定。
  *   - 选哪块屏靠结构体里的 displayMask 字段(南微屏实机 = 0x400)
  *   - bIsDDCPort=1, regAddrSize=0 且 pbI2cRegAddress=NULL(DDC 源地址 0x51 并进 data,
  *     不作寄存器), i2cSpeed=0x0A, 写地址 0x5E / 读地址 0x5F
@@ -19,7 +23,8 @@
  *   nvddc32 w <mask> <addr> <b0 b1 ...>           原样写 addr(hex 字节, 已含校验)
  *   nvddc32 r <mask> <addr> <n>                   从 addr 读 n 字节 -> "OK <hex>"
  *   nvddc32 x <mask> <waddr> <raddr> <n> <ms> <b0 ...>   写+延时+读, 一次往返
- *   nvddc32 serve                                 常驻: 逐行收上面的命令, 逐行回结果
+ *   nvddc32 serve [ppid]                          常驻: 逐行收上面的命令, 逐行回结果
+ *                                                 带 ppid 则父进程一退本进程就自杀
  *   nvddc32 list                                  枚举+EDID 明细(均匀度软件在用)
  *   nvddc32 set <0-100> [mask]                    南微亮度短帧 90 val chk
  *   nvddc32 raw <mask> <hex...>                   南微短帧, 自动补 xor 校验(调试)
@@ -59,10 +64,18 @@ typedef int   (__cdecl *OUT_FN)(void *, unsigned int *);
 #define VER1 ((unsigned int)sizeof(NV_I2C_V1) | (1u << 16))
 #define I2C_SPEED 0x0A
 
+#define NVAPI_INVALID_HANDLE (-8)       /* handle 没过驱动校验层, 帧根本没发出去 */
+
 static FN2 Write, Read;
-static void *g_handle;                  /* = 第一块 display 的 mask 值当句柄 */
+static void *g_handle;                  /* I2CWrite/Read 的第一个参数, 探出来的 */
+static int g_handle_probed;             /* 1 = 探针确认过, 0 = 只是回退到 masks[0] */
 static unsigned int g_masks[MAX_MASK];
+static void *g_raw[MAX_MASK];           /* Enum 返回的原始句柄 (0xDE0000xx) */
 static int g_nmask;
+
+static int i2c_write(unsigned int target, unsigned char addr,
+                     const unsigned char *data, int n);
+static void pick_handle(void);
 
 static int nv_init(void)
 {
@@ -82,10 +95,11 @@ static int nv_init(void)
         if (Enum((unsigned)i, &h) != 0) break;   /* -7 = END_ENUMERATION */
         unsigned int m = 0;
         if (GetOut) GetOut(h, &m);
+        g_raw[g_nmask] = h;
         g_masks[g_nmask++] = m;
     }
     if (g_nmask == 0) { printf("ERR no display enumerated\n"); return -103; }
-    g_handle = (void *)(UINT_PTR)g_masks[0];
+    pick_handle();
     return 0;
 }
 
@@ -121,6 +135,70 @@ static int i2c_read(unsigned int target, unsigned char addr,
     info.cbSize = (unsigned int)n;
     info.i2cSpeed = I2C_SPEED;
     return Read(g_handle, &info);
+}
+
+/* ---- handle 探测 ----------------------------------------------------------
+ * I2CWrite/Read 的第一个参数不是 Enum 出来的句柄(那样恒 -8), 2026-07-24 抓包时
+ * 那台机上是 0x100 —— 当时枚举到两块屏(0x100/0x400), 于是记成了"第一块屏的 mask"。
+ * 2026-07-30 只接一块屏(枚举只剩 0x400)时这条规则就崩了: handle=0x400 恒 -8,
+ * 连 EDID 都读不到, 上层看到的就是"整条通道死了"。
+ *
+ * 所以不猜: 逐个候选发一帧, 只看返回码。-8 = 驱动不认这个 handle; 其它任何码
+ * (0 成功 / NAK 类错误) 都说明 handle 过了校验层, 帧真发出去了。写 EDID 地址
+ * 0xA0 一个字节做探针 —— 无副作用, 不读回不 Sleep, 一次几百微秒, 全表扫完 <50ms。
+ */
+
+/* 候选表: 枚举到的 mask 优先(0x100 当年就这么来的), 再补全部单 bit 值(屏拔了以后
+   0x100 不在枚举结果里, 但 handle 可能仍要它), 最后才是 Enum 的原始句柄。 */
+static int handle_candidates(void **out, int max)
+{
+    int n = 0;
+    for (int i = 0; i < g_nmask && n < max; i++)
+        out[n++] = (void *)(UINT_PTR)g_masks[i];
+    for (int k = 0; k < 32 && n < max; k++) {
+        void *h = (void *)(UINT_PTR)(1u << k);
+        int dup = 0;
+        for (int j = 0; j < n; j++) if (out[j] == h) dup = 1;
+        if (!dup) out[n++] = h;
+    }
+    for (int i = 0; i < g_nmask && n < max; i++)
+        if (g_raw[i]) out[n++] = g_raw[i];
+    return n;
+}
+
+static int handle_probe_st(void *h, unsigned int target)
+{
+    void *save = g_handle;
+    unsigned char off = 0x00;
+    int st;
+    g_handle = h;
+    st = i2c_write(target, 0xA0, &off, 1);
+    g_handle = save;
+    return st;
+}
+
+/* 选定 g_handle。NVDDC32_HANDLE 环境变量可强制指定(hex), 用于压过探测结果。 */
+static void pick_handle(void)
+{
+    void *cand[MAX_MASK * 2 + 32];
+    int nc, i;
+    const char *env = getenv("NVDDC32_HANDLE");
+
+    g_handle = (void *)(UINT_PTR)g_masks[0];   /* 探不到就维持老行为 */
+    g_handle_probed = 0;
+    if (env && *env) {
+        g_handle = (void *)(UINT_PTR)strtoul(env, NULL, 16);
+        g_handle_probed = 2;                   /* 2 = 人工指定 */
+        return;
+    }
+    nc = handle_candidates(cand, (int)(sizeof(cand) / sizeof(cand[0])));
+    for (i = 0; i < nc; i++) {
+        if (handle_probe_st(cand[i], g_masks[0]) != NVAPI_INVALID_HANDLE) {
+            g_handle = cand[i];
+            g_handle_probed = 1;
+            return;
+        }
+    }
 }
 
 /* 南微短帧(Beacon 抓包同款): payload 后自动追 xor 校验, 种子 = 0x5E。 */
@@ -252,8 +330,48 @@ static int dispatch(int argc, char **argv)
         return 0;
     }
 
+    /* handle 全表扫描: 每个候选发一帧看返回码。-8 = 驱动不认这个 handle。
+       给"整条通道突然死了"排障用: 有任何一行 A0_st 不是 -8, 那行就是今天该用的
+       handle; 全是 -8 才是驱动/显卡层面真的没了。 */
+    if (_stricmp(cmd, "hscan") == 0) {
+        unsigned int target = (argc >= 2) ? (unsigned int)strtoul(argv[1], NULL, 16)
+                                          : g_masks[0];
+        /* 长帧 GET VCP 亮度, 与控制台 _probe() 发的完全一致, 无副作用 */
+        unsigned char getvcp[5] = { 0x51, 0x82, 0x01, 0x10, 0x9C };
+        void *cand[MAX_MASK * 2 + 32];
+        int nc = handle_candidates(cand, (int)(sizeof(cand) / sizeof(cand[0])));
+        printf("hscan target=0x%X candidates=%d current=0x%X probed=%d\n",
+               target, nc, (unsigned)(UINT_PTR)g_handle, g_handle_probed);
+        for (int i = 0; i < nc; i++) {
+            int a0 = handle_probe_st(cand[i], target);
+            printf("h=0x%08X A0_st=%d", (unsigned)(UINT_PTR)cand[i], a0);
+            if (a0 != NVAPI_INVALID_HANDLE) {
+                void *save = g_handle;
+                unsigned char e[128];
+                int est, wst;
+                g_handle = cand[i];
+                wst = i2c_write(target, NANWEI_ADDR, getvcp, 5);
+                ZeroMemory(e, sizeof(e));
+                est = read_edid(target, e);
+                g_handle = save;
+                printf("  <== ACCEPTED  5E_long_st=%d  edid_st=%d edid_ok=%d",
+                       wst, est, (est == 0 && e[0] == 0x00 && e[1] == 0xFF));
+            }
+            printf("\n");
+        }
+        return 0;
+    }
+
+    if (_stricmp(cmd, "h") == 0 && argc >= 2) {
+        g_handle = (void *)(UINT_PTR)strtoul(argv[1], NULL, 16);
+        g_handle_probed = 2;
+        printf("OK handle=0x%X\n", (unsigned)(UINT_PTR)g_handle);
+        return 0;
+    }
+
     if (_stricmp(cmd, "list") == 0) {
-        printf("handle=0x%X displays=%d\n", (unsigned)g_masks[0], g_nmask);
+        printf("handle=0x%X probed=%d displays=%d\n",
+               (unsigned)(UINT_PTR)g_handle, g_handle_probed, g_nmask);
         for (int i = 0; i < g_nmask; i++) {
             unsigned char e[128];
             ZeroMemory(e, sizeof(e));
@@ -296,6 +414,27 @@ static int dispatch(int argc, char **argv)
     return 2;
 }
 
+/* 父进程守卫: 父进程一消失就自杀。
+ *
+ * 光靠 stdin EOF 不够 —— GUI 崩了或被任务管理器强杀时, 本进程可能正阻塞在 nvapi
+ * 调用里, fgets 永远回不来, 于是留一堆 nvddc32.exe 在任务管理器 (2026-07-30 用户
+ * 实际遇到)。开一个线程等父进程句柄, 零轮询、父进程一退立刻走。 */
+static DWORD WINAPI parent_watch(LPVOID arg)
+{
+    WaitForSingleObject((HANDLE)arg, INFINITE);
+    ExitProcess(0);
+    return 0;
+}
+
+static void watch_parent(unsigned long pid)
+{
+    HANDLE ph = OpenProcess(SYNCHRONIZE, FALSE, (DWORD)pid);
+    HANDLE th;
+    if (!ph) return;                    /* 拿不到就算了, 还有 stdin EOF 兜着 */
+    th = CreateThread(NULL, 0, parent_watch, ph, 0, NULL);
+    if (th) CloseHandle(th);
+}
+
 /* 常驻模式: 每行一条命令, 每条回一行。父进程一次启动多次收发, 省掉进程/nvapi 初始化开销。 */
 static int serve(void)
 {
@@ -320,10 +459,15 @@ int main(int argc, char **argv)
     if (argc < 2) {
         printf("usage: nvddc32 enum | edid <mask> | w <mask> <addr> <hex...> | "
                "r <mask> <addr> <n> | x <mask> <waddr> <raddr> <n> <ms> <hex...> | "
-               "serve | list | set <0-100> [mask] | raw <mask> <hex...>\n");
+               "serve | list | set <0-100> [mask] | raw <mask> <hex...> | "
+               "hscan [mask] | h <handle>\n");
         return 2;
     }
     if (nv_init() != 0) return 10;
-    if (_stricmp(argv[1], "serve") == 0) return serve();
+    if (_stricmp(argv[1], "serve") == 0) {
+        /* serve [父进程 pid]: 带了就盯着它, 它一退本进程立刻退 (防残留) */
+        if (argc >= 3) watch_parent(strtoul(argv[2], NULL, 10));
+        return serve();
+    }
     return dispatch(argc - 1, argv + 1);
 }

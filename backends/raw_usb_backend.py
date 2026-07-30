@@ -31,6 +31,7 @@ import time
 from ctypes import wintypes
 
 from backends.base import Backend, Monitor
+from backends.edid import edid_name
 
 # RTUsb 私有设备接口 GUID (非通用 USB GUID); SetupAPI 按此枚举得设备路径。
 _RTUSB_GUID = (0xd3a14581, 0xfdda, 0x4402, (0xb5, 0xf9, 0x83, 0x73, 0xeb, 0xc5, 0x4d, 0xdb))
@@ -212,9 +213,27 @@ class RawUsbBackend(Backend):
         self._write_bytes(board_read_packet(n, slave=self._slave))
         return self._read_bytes(n + 2)   # 尾 2 字节 = 板 status + sum8
 
+    def read_edid_name(self):
+        """经小板读屏 EDID 取"厂商 型号"; 读不到返回 None。
+
+        板包的 sub 字段就是寄存器/偏移, 所以 EDID 读 = 从 0xA1 偏移 0 读 128 字节。
+        小板固件对 0xA0/0xA1 认不认没在真机验过, 所以整段包在 try 里, 拿不到就退回
+        默认名 —— 绝不能因为取个显示名把主力通道搞挂。
+        """
+        try:
+            self._write_bytes(board_read_packet(128, slave=0xA1, sub=0x00))
+            raw = self._read_bytes(130)
+            edid = list(raw[:128])
+            if len(edid) < 128 or edid[0] != 0x00 or edid[1] != 0xFF:
+                return None
+            return edid_name(edid)
+        except Exception:
+            return None
+
     # ---- Backend 接口 ----
     def enum_monitors(self):
-        return [Monitor(0, "Realtek USB ISP 小板 (RTUsb, DDC/CI 0x%02X)" % self._slave)]
+        name = self.read_edid_name() or "USB 小板"
+        return [Monitor(0, "%s (USB 0x%02X)" % (name, self._slave))]
 
     def set_vcp(self, mon_id, code, value):
         self._i2c_write(ddc_frame(set_vcp_payload(code, value), slave=self._slave))

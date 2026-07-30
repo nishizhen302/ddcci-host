@@ -27,11 +27,11 @@ const demoBridge = {
       ok: true,
       targets: [
         { id: "rawusb:0x5E:0", backend: "rawusb", address: "0x5E", mon_id: 0,
-          description: "Realtek USB ISP", recommended: true },
+          description: "JRD UC1190_DVI (USB 0x5E)", recommended: true },
         { id: "gpu:0x5E:0", backend: "gpu", address: "0x5E", mon_id: 0,
-          description: "NVIDIA display #0", recommended: false },
+          description: "JRD UC1190_DVI (DDC/CI 0x5E)", recommended: false },
         { id: "gpu:0x6E:1", backend: "gpu", address: "0x6E", mon_id: 1,
-          description: "NVIDIA display #1", recommended: false },
+          description: "DEL U2412 (DDC/CI 0x6E)", recommended: false },
       ],
       errors: [],
     };
@@ -158,9 +158,9 @@ function initTheme() {
 
 function setTargetSummary(target, state) {
   CURRENT_TARGET = target;
-  const name = target
-    ? `${target.backend === "rawusb" ? "USB 小板" : "GPU"} · ${target.description} · ${target.address}`
-    : "未发现可用目标";
+  // description 后端已经组好成 "JRD UC1190_DVI (DDC/CI 0x5E)" / "... (USB 0x5E)",
+  // 这里不再叠加 backend 名和地址 —— 叠出来又长又重复 (2026-07-30 用户反馈)。
+  const name = target ? target.description : "未发现可用目标";
   $("#target-name").textContent = name;
   $("#backend-chip").textContent = target ? target.backend : "none";
   $("#addr-chip").textContent = target ? `addr ${target.address}` : "addr --";
@@ -178,9 +178,10 @@ function renderTargetMenu(targets) {
     button.className = `target-option${index === 0 ? " active" : ""}`;
     button.type = "button";
     button.dataset.id = target.id;
+    button.title = target.id;          // 排障要的 backend/地址/通道号留在悬停里
     button.innerHTML =
       `<span><b>${target.recommended ? "自动推荐" : target.backend === "gpu" ? "显卡通道" : "控制路径"}</b>` +
-      `<small>${target.backend} · ${target.description} · ${target.address}</small></span>` +
+      `<small>${target.description}</small></span>` +
       `<em>${target.recommended ? "稳" : "可选"}</em>`;
     button.addEventListener("click", () => selectTarget(target.id));
     menu.appendChild(button);

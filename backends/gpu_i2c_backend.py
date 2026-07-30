@@ -56,6 +56,7 @@ _NV_ID = {
     "I2CWrite": 0xE812EB07,
 }
 _NVAPI_END_ENUMERATION = -7
+_NVAPI_INVALID_HANDLE = -8   # handle 没过驱动校验层, 帧根本没发出去
 # 2026-07-24 真机抓包(别人能通 0x5E 的 Beacon_Qa_TestGamma, nvapi shim 拦截)结论：
 # 之前 NV 恒 -5 的真凶是用了 V3 结构体。能通的工具用 NV_I2C_INFO_V1(version 低16位=
 # sizeof)，非 Ex I2CWrite/Read，i2cSpeed 用固定值 0x0A(V1 没有 i2cSpeedKhz/portId)。
@@ -84,8 +85,8 @@ _NV_I2C_INFO_VER1 = ctypes.sizeof(_NvI2cInfoV1) | (1 << 16)
 class _NvChannel:
     """一块 NVIDIA display (由 displayMask 标识) = 一条候选 DDC 通道。
 
-    handle 传的是"第一块 display 的 mask 值"(实机抓包实证), 全通道共用同一个;
-    区分目标屏只靠结构体里的 displayMask。
+    handle 由 `_pick_nv_handle` 探出来 (不能按屏数猜, 见那里的注释), 全通道共用
+    同一个; 区分目标屏只靠结构体里的 displayMask。
     """
 
     def __init__(self, funcs, handle, mask, idx, slave=_SLAVE):
@@ -93,7 +94,26 @@ class _NvChannel:
         self._h = handle
         self._mask = mask
         self.slave = slave
+        # label = UI 里给人看的显示器身份 (EDID 名优先); desc = 日志/排障用的全量细节
+        self.label = "NVIDIA display #%d" % idx
         self.desc = "NVIDIA display #%d (mask 0x%X)" % (idx, mask)
+
+    def read_edid_name(self):
+        """读 EDID 取"厂商 型号"; 读不到返回 None。只在枚举时调一次。"""
+        try:
+            off = (ctypes.c_uint8 * 1)(0x00)
+            info = self._info(0xA0, off, 1)
+            if self._f["I2CWrite"](self._h, ctypes.byref(info)) != 0:
+                return None
+            time.sleep(0.04)
+            buf = (ctypes.c_uint8 * 128)()
+            info = self._info(0xA1, buf, 128)
+            if self._f["I2CRead"](self._h, ctypes.byref(info)) != 0:
+                return None
+            return nv32_helper.edid_name(list(buf))
+        except Exception as e:
+            _dbg("nv EDID 读失败: %s", e)
+            return None
 
     def _info(self, dev_addr, data_buf, nbytes):
         info = _NvI2cInfoV1()
@@ -154,6 +174,7 @@ def _enum_nv_channels(slave=_SLAVE):
     if st != 0:
         return []
     masks = []
+    raw_handles = []
     i = 0
     while True:
         h = ctypes.c_void_p()
@@ -166,20 +187,67 @@ def _enum_nv_channels(slave=_SLAVE):
         out_id = ctypes.c_uint32(0)
         funcs["GetAssociatedDisplayOutputId"](h, ctypes.byref(out_id))
         masks.append(out_id.value or 1)
+        raw_handles.append(h)
         i += 1
     if not masks:
         _dbg("nvapi 一块 display 都没枚举到")
         return []
-    # handle = 第一块 display 的 mask 值 (实机抓包: 传 Enum 出来的句柄恒 -8)
-    handle = ctypes.c_void_p(masks[0])
+    handle = _pick_nv_handle(funcs, masks, raw_handles, slave)
     chans = [_NvChannel(funcs, handle, m, i, slave=slave) for i, m in enumerate(masks)]
-    _dbg("nvapi 枚举到 %d 个 display, handle=0x%X", len(chans), masks[0])
+    for c in chans:                       # 取显示器名, UI 列表要拿它当身份
+        name = c.read_edid_name()
+        if name:
+            c.label = name
+            c.desc = "%s (mask 0x%X)" % (name, c._mask)
+    _dbg("nvapi 枚举到 %d 个 display, handle=0x%X", len(chans), handle.value or 0)
     return chans
 
 
+def _nv_handle_candidates(masks, raw_handles):
+    """handle 候选表, 优先级同 32 位 helper (tools/nvddc32.c 的 handle_candidates)。"""
+    out = []
+    for m in masks:
+        if m not in out:
+            out.append(m)
+    for k in range(32):
+        v = 1 << k
+        if v not in out:
+            out.append(v)
+    return [ctypes.c_void_p(v) for v in out] + [h for h in raw_handles if h.value]
+
+
+def _pick_nv_handle(funcs, masks, raw_handles, slave):
+    """探出 I2CWrite/Read 该传的 handle。
+
+    这个参数不是 Enum 出来的 0xDE0000xx 句柄 (那样恒 -8)。2026-07-24 抓包那台机上
+    是 0x100, 当时枚举到两块屏 (0x100/0x400), 于是错记成"第一块 display 的 mask";
+    2026-07-30 只接一块屏 (枚举只剩 0x400) 时 handle=0x400 恒 -8, 整条通道看着像
+    死了。所以不猜: 逐个候选往 EDID 地址 0xA0 写一字节, 返回码不是 -8 就采纳
+    (无副作用, 不读回, 全表扫完 <50ms)。全军覆没则退回老行为。
+    """
+    override = os.environ.get("DDCCI_NV_HANDLE")
+    if override:
+        try:
+            return ctypes.c_void_p(int(override, 0))
+        except ValueError:
+            _dbg("DDCCI_NV_HANDLE=%r 不是数字, 忽略", override)
+    probe = _NvChannel(funcs, None, masks[0], 0, slave=slave)
+    buf = (ctypes.c_uint8 * 1)(0x00)
+    for cand in _nv_handle_candidates(masks, raw_handles):
+        info = probe._info(0xA0, buf, 1)
+        st = funcs["I2CWrite"](cand, ctypes.byref(info))
+        if st != _NVAPI_INVALID_HANDLE:
+            _dbg("nv handle 探到 0x%X (A0 写 st=%d)", cand.value or 0, st)
+            return cand
+    _dbg("nv handle 全部候选都回 -8, 退回 masks[0]=0x%X", masks[0])
+    return ctypes.c_void_p(masks[0])
+
+
 # ============ NVIDIA (32 位桥): tools/nvddc32.exe ============
-# 实机那台英伟达机上 64 位 nvapi64 全回 -8, 只有 32 位 nvapi 通; 64 位进程加载不了
-# 32 位 DLL, 故经 helper 子进程转发。协议/定位见 backends/nv32_helper.py。
+# 2026-07-24 当时结论是"64 位 nvapi64 全回 -8, 只有 32 位 nvapi 通", 于是有了这条桥。
+# 2026-07-30 查明 -8 的真因是 handle 传错 (见 _pick_nv_handle), 与位数无关 —— 修完
+# 64 位直连在同一台机上也通了。桥保留: 它已在真机长期验证, 且万一某驱动只认 32 位
+# 仍是退路。协议/定位见 backends/nv32_helper.py。
 
 class _Nv32Channel:
     """helper 里的一块 display = 一条候选 DDC 通道 (读写都经子进程一行命令)。"""
@@ -188,6 +256,7 @@ class _Nv32Channel:
         self._c = client
         self._mask = mask
         self.slave = slave
+        self.label = name or "NVIDIA display"
         self.desc = "NVIDIA(32桥) %s (mask 0x%X)" % (name or "display", mask)
 
     def i2c_write(self, data):
@@ -290,6 +359,7 @@ class _AdlDdcChannel:
         self.slave = slave
         self.read_addr = slave | 1
         self.framing = "opt0"
+        self.label = name or "AMD display %d" % display
         self.desc = "AMD adapter %d display %d (%s)" % (adapter, display, name)
 
     def _option(self):
@@ -329,6 +399,7 @@ class _AdlChannel:
         self._line = line
         self.slave = slave
         self.read_addr = slave   # 有的驱动读要传 slave|1, 探测时两种都试
+        self.label = "AMD display (line %d)" % line   # 盲扫通道拿不到显示器名
         self.desc = "AMD adapter %d line %d" % (adapter, line)
 
     def _xfer(self, action, addr, offset, offset_size, data):
@@ -461,9 +532,26 @@ def _pick_channels(candidates, settle, fallback_scan=True):
     primary = [c for c in candidates if not getattr(c, "is_fallback", False)]
     live = [c for c in primary if _probe(c, settle)]
     if live or not fallback_scan:
-        return live
+        return _dedup_by_label(live)
     fallback = [c for c in candidates if getattr(c, "is_fallback", False)]
-    return [c for c in fallback if _probe(c, settle)]
+    return _dedup_by_label([c for c in fallback if _probe(c, settle)])
+
+
+def _dedup_by_label(chans):
+    """同一台屏只留一条通道。
+
+    2026-07-30 起 64 位直连和 32 位桥在同一台机上都通了, 于是同一块屏出现两次、
+    UI 上两行字一模一样。保留先探到的那条 (候选顺序 = nv64 直连优先, 少一个子进程)。
+    """
+    out, seen = [], set()
+    for c in chans:
+        key = getattr(c, "label", None) or c.desc
+        if key in seen:
+            _dbg("同屏重复通道, 跳过: %s", c.desc)
+            continue
+        seen.add(key)
+        out.append(c)
+    return out
 
 
 class GpuI2CBackend(Backend):
@@ -513,7 +601,8 @@ class GpuI2CBackend(Backend):
             raise
 
     def enum_monitors(self):
-        return [Monitor(i, c.desc + " (DDC/CI 0x%02X)" % self._slave)
+        # UI 里只要"屏名 (DDC/CI 0x5E)"; mask/桥/adapter 那些排障细节走 desc 进日志。
+        return [Monitor(i, "%s (DDC/CI 0x%02X)" % (c.label, self._slave))
                 for i, c in enumerate(self._chans)]
 
     def set_vcp(self, mon_id, code, value):

@@ -19,6 +19,86 @@ def test_adl_i2c_layout():
     assert ctypes.sizeof(G._AdlI2c) == 40
 
 
+def _fake_funcs(accepted_handle):
+    """假 nvapi: 只有 handle == accepted_handle 的 I2CWrite 不回 -8。"""
+    calls = []
+
+    def write(handle, _info):
+        h = handle.value or 0
+        calls.append(h)
+        return 0 if h == accepted_handle else G._NVAPI_INVALID_HANDLE
+
+    return {"I2CWrite": write}, calls
+
+
+def test_nv_handle_probed_when_only_one_display_enumerated(monkeypatch):
+    """回归 2026-07-30: 只接一块屏时不能拿 masks[0] 当 handle。
+
+    抓包那台机 handle=0x100 / 目标屏 mask=0x400。屏数一变, masks[0] 就是 0x400,
+    而 0x400 当 handle 恒 -8 —— 整条通道看着像死了 (GUI 报 0x5E 无应答)。
+    """
+    monkeypatch.delenv("DDCCI_NV_HANDLE", raising=False)
+    funcs, calls = _fake_funcs(0x100)
+    h = G._pick_nv_handle(funcs, [0x400], [], 0x5E)
+    assert h.value == 0x100
+    assert calls[0] == 0x400          # 先试枚举到的 mask (老规则), 被 -8 挡掉
+    assert 0x100 in calls             # 再扫单 bit 候选, 探到能用的
+
+
+def test_nv_handle_prefers_enumerated_mask_when_it_works(monkeypatch):
+    """两块屏都在时行为不变: masks[0] 就是对的, 一次命中不乱扫。"""
+    monkeypatch.delenv("DDCCI_NV_HANDLE", raising=False)
+    funcs, calls = _fake_funcs(0x100)
+    h = G._pick_nv_handle(funcs, [0x100, 0x400], [], 0x5E)
+    assert h.value == 0x100
+    assert calls == [0x100]
+
+
+def test_nv_handle_env_override(monkeypatch):
+    monkeypatch.setenv("DDCCI_NV_HANDLE", "0x800")
+    funcs, calls = _fake_funcs(0x100)
+    assert G._pick_nv_handle(funcs, [0x400], [], 0x5E).value == 0x800
+    assert calls == []                # 人工指定就不探了
+
+
+def test_nv_handle_falls_back_when_all_rejected(monkeypatch):
+    """全候选都 -8 (驱动层真的没了): 退回老行为, 让上层报"无应答"而不是崩。"""
+    monkeypatch.delenv("DDCCI_NV_HANDLE", raising=False)
+    funcs, _ = _fake_funcs(None)
+    assert G._pick_nv_handle(funcs, [0x400], [], 0x5E).value == 0x400
+
+
+def test_nv_handle_candidates_cover_recipe_values():
+    cands = [c.value or 0 for c in G._nv_handle_candidates([0x400], [])]
+    assert cands[0] == 0x400          # 枚举到的优先
+    assert 0x100 in cands             # 抓包实证过的那个值一定在表里
+    assert len(cands) == len(set(cands))
+
+
+def test_dedup_keeps_first_channel_per_screen():
+    """同一台屏在 nv64 直连和 nv32 桥上各出现一次时, UI 只该看到一条。
+
+    2026-07-30: handle 修好后两条通道同时通了, 简化文案后两行字一模一样。
+    """
+    class C:
+        def __init__(self, label, desc):
+            self.label, self.desc = label, desc
+
+    a = C("JRD UC1190_DVI", "JRD UC1190_DVI (mask 0x100)")
+    b = C("JRD UC1190_DVI", "NVIDIA(32桥) JRD UC1190_DVI (mask 0x100)")
+    c = C("DEL U2412", "DEL U2412 (mask 0x400)")
+    assert G._dedup_by_label([a, b, c]) == [a, c]
+
+
+def test_enum_monitors_shows_only_screen_name_and_address():
+    class C:
+        label = "JRD UC1190_DVI"
+        desc = "JRD UC1190_DVI (mask 0x100)"
+
+    be = GpuBackendForTest([C()], slave=0x5E)
+    assert be.enum_monitors()[0].description == "JRD UC1190_DVI (DDC/CI 0x5E)"
+
+
 class FakeChannel:
     """记录写入、按脚本回读的假通道。"""
 

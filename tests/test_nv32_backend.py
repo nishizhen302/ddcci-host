@@ -25,6 +25,36 @@ def client():
     c.close()
 
 
+def test_serve_argv_carries_parent_pid(monkeypatch):
+    """helper 必须收到 `serve <我们的 pid>`: 它靠这个在我们崩掉后自杀。
+
+    2026-07-30 回归: 只靠 stdin EOF 时, helper 卡在 nvapi 调用里收不到 EOF,
+    任务管理器里攒下一堆 nvddc32.exe。
+    """
+    seen = {}
+    real_popen = H.subprocess.Popen
+
+    def spy(argv, **kw):
+        seen["argv"] = list(argv)
+        return real_popen(argv, **kw)
+
+    monkeypatch.setattr(H.subprocess, "Popen", spy)
+    c = H.Nv32Client(exe=FAKE).start()
+    try:
+        assert seen["argv"][-2] == "serve"
+        assert seen["argv"][-1] == str(os.getpid())
+    finally:
+        c.close()
+
+
+def test_client_close_reaps_process(client):
+    """close() 之后子进程必须真的没了 (别指望 GC)。"""
+    p = client._p
+    client.close()
+    assert p.poll() is not None
+    assert client._p is None
+
+
 # ---- 纯函数 ----
 
 def test_unhex_and_edid_name():
@@ -124,7 +154,9 @@ def test_backend_uses_helper_channels(monkeypatch):
     try:
         mons = be.enum_monitors()
         assert len(mons) == 1                     # 0x100 那块不应答 0x5E, 被淘汰
-        assert "0x400" in mons[0].description
+        # UI 文案 = "屏名 (DDC/CI 0x5E)", 不再带 mask/桥类型 (2026-07-30 用户要求)
+        assert mons[0].description == "DEL U2412 (DDC/CI 0x5E)"
+        assert "0x400" in be._chans[0].desc       # mask 细节仍留在 desc, 供日志排障
         assert be.get_vcp(0, 0x10) == (0x32, 0x64)
         assert be.set_vcp(0, 0x10, 0x40)
         assert be.get_vcp(0, 0x10) == (0x40, 0x64)

@@ -72,8 +72,10 @@ class Nv32Client:
             raise Nv32Error("找不到 %s (英伟达通道 helper)" % EXE_NAME)
         argv = list(self.exe) if isinstance(self.exe, (list, tuple)) else [self.exe]
         try:
+            # 带上自己的 pid: helper 会盯着它, 我们崩了/被强杀 (stdin 的 EOF 到不了它,
+            # 尤其是它正卡在 nvapi 调用里) 也不会留一堆 nvddc32.exe 在任务管理器。
             self._p = subprocess.Popen(
-                argv + ["serve"],
+                argv + ["serve", str(os.getpid())],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL, text=True, encoding="ascii",
                 errors="replace", bufsize=1, creationflags=_CREATE_NO_WINDOW)
@@ -177,21 +179,5 @@ def _unhex(s):
     return [int(s[i:i + 2], 16) for i in range(0, len(s) - 1, 2)]
 
 
-# ---- EDID 小解析 (只为把通道名字写得像人话: "DEL U2412M (0x400)") ----
-
-def edid_name(edid):
-    """从 128 字节 EDID 取 "厂商 型号"; 解析不出返回 None。"""
-    if len(edid) < 128 or edid[0] != 0x00 or edid[1] != 0xFF:
-        return None
-    ident = (edid[8] << 8) | edid[9]
-    mfr = "".join(chr(ord("A") + ((ident >> s) & 0x1F) - 1) for s in (10, 5, 0))
-    model = ""
-    for d in range(54, 109, 18):
-        if edid[d:d + 4] == [0, 0, 0, 0xFC]:
-            for c in edid[d + 5:d + 18]:
-                if c in (0x0A, 0x00):
-                    break
-                model += chr(c)
-            break
-    name = ("%s %s" % (mfr, model.strip())).strip()
-    return name or None
+# EDID 解析搬到 backends/edid.py (USB 小板后端也要用); 这里重新导出保持老调用点可用。
+from backends.edid import edid_name   # noqa: E402,F401
