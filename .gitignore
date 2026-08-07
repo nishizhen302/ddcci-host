@@ -1,10 +1,16 @@
 # Python
+.venv38/
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
 build/
 dist/
+build-win7/
+dist-win7/
+
+# 打包时由 spec 生成的版本信息 (版本号=提交数, 入库会自我循环)
+_build_info.py
 
 # 临时自测截图
 _*.png
@@ -12,6 +18,10 @@ _*.png
 # superpowers 工作目录 (brainstorm / skills 缓存, 非项目源码)
 .superpowers/
 
+# zig 编 helper 时顺带产的调试符号 (exe 本身要提交, 交付物依赖它)
+tools/*.pdb
+
 # OS
 Thumbs.db
 desktop.ini
+_probe_*.py

@@ -44,6 +44,14 @@ class Backend(ABC):
         """读 capabilities 字符串；读不到返回 None。"""
         raise NotImplementedError
 
+    def send_raw(self, mon_id: int, payload) -> bool:
+        """发一条非标 DDC/CI 帧 (payload = 命令字起的字节列表, 组帧/校验由后端做)。
+
+        南微协议的模拟按键 (0xC0 0x96 key 00) 走这里 —— 不是标准 SET VCP,
+        dxva2 这类只有 VCP 语义的通道发不了, 故默认不支持; 低层 I²C 后端覆写。
+        """
+        raise NotImplementedError("后端 %r 不支持发原始 DDC/CI 帧" % self.name)
+
     def close(self):
         """释放资源 (句柄等)。默认空实现。"""
         pass

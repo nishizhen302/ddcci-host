@@ -1,0 +1,119 @@
+{
+  "_comment": "RL6410 PHY 调试首批参数(黑屏+SSC 相关)。page/offset=寄存器地址; mask/shift=位域; live=是否在线即时生效(false=需 P1 override 表固化)。",
+  "groups": [
+    { "id": "freq", "label": "频率检测窗口" },
+    { "id": "cdr",  "label": "CDR / 展频跟踪" },
+    { "id": "dfe",  "label": "DFE / 眼质量" },
+    { "id": "ssc",  "label": "SSC / VCO 锁定范围 ⚠进阶" }
+  ],
+  "params": [
+    {
+      "name": "freq_offset", "group": "freq", "label": "频检容差档 (offset)",
+      "page": 113, "offset": 231, "mask": 7, "shift": 0,
+      "min": 0, "max": 7, "default": 2, "live": true,
+      "note": "P71_E7[2:0] 频率判定容差。↑放宽=不轻易判\"信号丢\"(治偶发黑屏自恢复/抗SSC),太大可能漏判真丢失；↓收紧=对异常更敏感。黑屏发作就从 2 起每次 +1 试到 4~5。"
+    },
+    {
+      "name": "freq_stable", "group": "freq", "label": "频检稳定时间",
+      "page": 113, "offset": 236, "mask": 255, "shift": 0,
+      "min": 0, "max": 255, "default": 63, "live": true,
+      "note": "P71_EC 判稳时间(约 5ms=63)。↑=要连续稳更久才认\"锁定\",抗抖动误判,但恢复显示更慢；↓=认得快但易被瞬态干扰骗。黑屏频繁就从 63 加到 80~100。"
+    },
+    {
+      "name": "cdr_icp", "group": "cdr", "label": "CDR 电荷泵 Icp",
+      "page": 123, "offset": 49, "mask": 15, "shift": 0,
+      "min": 0, "max": 15, "default": 10, "live": true,
+      "note": "P7B_31[3:0] CDR 电荷泵电流=环路带宽。↑=环路更快,能跟住 SSC 扫频(治开SSC点不亮),但太高会引入抖动、画面闪点；↓=更稳但跟不上快速频偏。SSC 点不亮就从 10 起每次 +1 试到 12~13,出闪点再退回。"
+    },
+    {
+      "name": "dfe_le_l0", "group": "dfe", "label": "DFE LE 初值 (L0)",
+      "page": 123, "offset": 162, "mask": 63, "shift": 0,
+      "min": 0, "max": 24, "default": 12, "live": false, "slot": 0,
+      "note": "P7B_A2[5:0] 通道0 线性均衡高频提升量。↑=补线损、撑开垂直眼(治长线/劣质线发虚、SSC点不亮),过高会过均衡反而引入噪声；↓=均衡弱。L0/L1/L2 三通道一般一起加。从 12 起每次 +2 试到 16~18。⚠需 P1 固化否则重锁被覆盖。"
+    },
+    {
+      "name": "dfe_le_l1", "group": "dfe", "label": "DFE LE 初值 (L1)",
+      "page": 123, "offset": 178, "mask": 63, "shift": 0,
+      "min": 0, "max": 24, "default": 12, "live": false, "slot": 1,
+      "note": "P7B_B2[5:0] 通道1 高频提升量。作用同 L0,与 L0/L2 一起等量调。从 12 起 +2 试到 16~18。⚠需 P1 固化。"
+    },
+    {
+      "name": "dfe_le_l2", "group": "dfe", "label": "DFE LE 初值 (L2)",
+      "page": 123, "offset": 194, "mask": 63, "shift": 0,
+      "min": 0, "max": 24, "default": 12, "live": false, "slot": 2,
+      "note": "P7B_C2[5:0] 通道2 高频提升量。作用同 L0,与 L0/L1 一起等量调。从 12 起 +2 试到 16~18。⚠需 P1 固化。"
+    },
+    {
+      "name": "dfe_adapt_off", "group": "dfe", "label": "关闭DFE自适应 (0开/1关)",
+      "page": 123, "offset": 43, "mask": 16, "shift": 4,
+      "min": 0, "max": 1, "default": 0, "live": false, "slot": 3,
+      "note": "P7B_2B[4] reg_adp_eq_off。=1 关掉 DFE 闭环自适应→均衡器被钉死,这时改 LE 才在好线上看得出眼图塌(自适应不再纠偏)。做法:此项设1+📌、LE设低值+📌,再拔插重锁。⚠重锁会被覆盖,必须📌固化。"
+    },
+    {
+      "name": "dfe_adapt_mode", "group": "dfe", "label": "DFE 自适应模式",
+      "page": 123, "offset": 224, "mask": 192, "shift": 6,
+      "min": 0, "max": 3, "default": 3, "live": false, "slot": 4,
+      "note": "P7B_E0[7:6] adapt_mode。2=幅度自适应+独立LE环, 3=不带独立LE环(高速默认)。换模式会整体改变 DFE 收敛方式,SSC 调试常动它。⚠需📌固化。"
+    },
+    {
+      "name": "dfe_tap1_l0", "group": "dfe", "label": "DFE Tap1 初值 (L0)",
+      "page": 123, "offset": 165, "mask": 63, "shift": 0,
+      "min": 0, "max": 55, "default": 12, "live": false, "slot": 5,
+      "note": "P7B_A5[5:0] 通道0 Tap1=消前一位拖尾(post-cursor ISI)。LE 撑不开眼时配合加。L0/L1/L2 一起调。⚠需📌固化。"
+    },
+    {
+      "name": "dfe_tap1_l1", "group": "dfe", "label": "DFE Tap1 初值 (L1)",
+      "page": 123, "offset": 181, "mask": 63, "shift": 0,
+      "min": 0, "max": 55, "default": 12, "live": false, "slot": 6,
+      "note": "P7B_B5[5:0] 通道1 Tap1。同 L0,等量调。⚠需📌固化。"
+    },
+    {
+      "name": "dfe_tap1_l2", "group": "dfe", "label": "DFE Tap1 初值 (L2)",
+      "page": 123, "offset": 197, "mask": 63, "shift": 0,
+      "min": 0, "max": 55, "default": 12, "live": false, "slot": 7,
+      "note": "P7B_C5[5:0] 通道2 Tap1。同 L0,等量调。⚠需📌固化。"
+    },
+    {
+      "name": "cdr_cp", "group": "cdr", "label": "CDR 环路电容 Cp",
+      "page": 123, "offset": 30, "mask": 48, "shift": 4,
+      "min": 0, "max": 3, "default": 2, "live": false, "slot": 8,
+      "note": "P7B_1E[5:4] cmu_sel_cp。环路滤波电容(0/1/2/3=0/?/2pF…),配合 Icp 决定环路阻尼/带宽。⚠需📌固化。"
+    },
+    {
+      "name": "cdr_rs", "group": "cdr", "label": "CDR 环路电阻 Rs",
+      "page": 123, "offset": 30, "mask": 7, "shift": 0,
+      "min": 0, "max": 7, "default": 6, "live": false, "slot": 9,
+      "note": "P7B_1E[2:0] cmu_sel_Rs。环路串联电阻(零点位置),影响环路稳定性/相位裕度。和 Cp/Icp 一起决定 CDR 动态。⚠需📌固化。"
+    },
+    {
+      "name": "cdr_wide_temp", "group": "ssc", "label": "宽温 VCO Band (0关/1开)",
+      "page": 123, "offset": 45, "mask": 32, "shift": 5,
+      "min": 0, "max": 1, "default": 1, "live": false, "slot": 10,
+      "note": "P7B_2D[5] en_wide_temp。展宽 VCO 频率范围。SSC 扫频范围大、点不亮时优先确认它=1。⚠需📌固化。"
+    },
+    {
+      "name": "vco_band_l0", "group": "ssc", "label": "VCO Band (L0)",
+      "page": 123, "offset": 50, "mask": 127, "shift": 0,
+      "min": 0, "max": 127, "default": 64, "live": false, "slot": 11,
+      "note": "P7B_32[6:0] 通道0 VCO 频带。固件自动检测+1 设定;SSC 点不亮可手动微调(±1~±3)扩/挪锁定范围。⚠盲调易丢锁,小步来;必须📌固化。"
+    },
+    {
+      "name": "vco_band_l1", "group": "ssc", "label": "VCO Band (L1)",
+      "page": 123, "offset": 51, "mask": 127, "shift": 0,
+      "min": 0, "max": 127, "default": 64, "live": false, "slot": 12,
+      "note": "P7B_33[6:0] 通道1 VCO 频带。同 L0,三 lane 一般一起微调。⚠需📌固化。"
+    },
+    {
+      "name": "vco_band_l2", "group": "ssc", "label": "VCO Band (L2)",
+      "page": 123, "offset": 52, "mask": 127, "shift": 0,
+      "min": 0, "max": 127, "default": 64, "live": false, "slot": 13,
+      "note": "P7B_34[6:0] 通道2 VCO 频带。同 L0。⚠需📌固化。"
+    },
+    {
+      "name": "fld_auto_mode", "group": "ssc", "label": "FLD 自动模式 (0手动/1自动)",
+      "page": 123, "offset": 43, "mask": 128, "shift": 7,
+      "min": 0, "max": 1, "default": 1, "live": false, "slot": 14,
+      "note": "P7B_2B[7] reg_auto_mode。FLD 频率锁定带自动选择。默认=1自动;调试时偶尔关掉配合手动 VCO band。⚠需📌固化。"
+    }
+  ]
+}

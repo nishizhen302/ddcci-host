@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>管脚配置</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="panel">
+    <div class="pbar pywebview-drag-region">
+      <span class="dot" id="conn-dot"></span>
+      <span class="title" id="title">管脚配置</span>
+      <span class="bk" id="bk"></span>
+      <select id="mon" class="sel pywebview-no-drag"></select>
+      <button id="refresh" class="icon pywebview-no-drag" title="重新枚举">↻</button>
+      <span class="grow"></span>
+      <button id="win-min" class="icon pywebview-no-drag">—</button>
+      <button id="win-close" class="icon pywebview-no-drag">×</button>
+    </div>
+
+    <div class="body">
+      <div class="side">
+        <input id="search" class="search" placeholder="搜索 球名 / 功能…">
+        <div id="list"></div>
+      </div>
+      <div id="detail" class="detail"><p class="empty">选择左侧一个管脚</p></div>
+    </div>
+  </div>
+
+  <div class="resz n"></div><div class="resz s"></div><div class="resz e"></div><div class="resz w"></div>
+  <div class="resz ne"></div><div class="resz nw"></div><div class="resz se"></div><div class="resz sw"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

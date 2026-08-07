@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DDCCI控制台</title>
+  <link rel="stylesheet" href="style.css?v=20260730a">
+</head>
+<body data-theme="light">
+  <div class="resz t"  data-ht="12"></div>
+  <div class="resz b"  data-ht="15"></div>
+  <div class="resz l"  data-ht="10"></div>
+  <div class="resz r"  data-ht="11"></div>
+  <div class="resz tl" data-ht="13"></div>
+  <div class="resz tr" data-ht="14"></div>
+  <div class="resz bl" data-ht="16"></div>
+  <div class="resz br" data-ht="17"></div>
+
+  <main class="shell" aria-label="南微 DDCCI 控制台">
+    <header class="titlebar pywebview-drag-region">
+      <div class="brand">
+        <span id="pulse" class="status-dot" data-state="idle"></span>
+        <strong>DDC控制台</strong>
+        <span id="ver-label" class="ver pywebview-no-drag" title="检查更新">v…</span>
+        <span id="conn">连接中…</span>
+      </div>
+      <div class="title-actions">
+        <button id="win-refresh" class="icon-btn pywebview-no-drag" type="button" aria-label="重新扫描" title="重新扫描">↻</button>
+        <button id="skin" class="icon-btn theme-toggle pywebview-no-drag" type="button" aria-label="切换皮肤" title="切换深色 / 浅色">
+          <span class="moon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+          <span class="sun"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.66 1.41"/></svg></span>
+        </button>
+        <button id="win-min" class="icon-btn ghost pywebview-no-drag" type="button" aria-label="最小化" title="最小化">−</button>
+        <button id="win-close" class="icon-btn close pywebview-no-drag" type="button" aria-label="关闭" title="关闭">×</button>
+      </div>
+    </header>
+
+    <div class="scroll">
+    <div class="scroll-inner">
+    <section class="connect-strip" aria-label="连接信息">
+      <details class="target-picker" id="target-picker">
+        <summary>
+          <strong id="target-name">扫描中...</strong>
+        </summary>
+        <div id="target-menu" class="target-menu" role="listbox" aria-label="选择控制路径"></div>
+      </details>
+      <div class="chip-row">
+        <span class="chip" id="backend-chip">backend</span>
+        <span class="chip soft" id="addr-chip">addr --</span>
+        <span class="chip soft" id="version-chip">HW v-- · SW v--</span>
+      </div>
+    </section>
+
+    <section class="panel remote" aria-label="模拟按键">
+      <div class="section-head">
+        <span>模拟按键</span>
+        <b>OSD Keys</b>
+      </div>
+      <div class="key-grid">
+        <button type="button" data-key="menu">MENU</button>
+        <button type="button" data-key="left">LEFT</button>
+        <button type="button" data-key="right">RIGHT</button>
+        <button type="button" data-key="exit">EXIT</button>
+      </div>
+      <div class="macro-row">
+        <button id="factory-btn" class="macro-btn" type="button">
+          <span>进入工厂菜单</span>
+          <b>MENU→OK</b>
+        </button>
+        <button id="aging-btn" class="macro-btn" type="button">
+          <span>开启老化</span>
+          <b>工厂菜单→老化</b>
+        </button>
+      </div>
+      <div class="raw-key-row">
+        <label for="raw-key">自定义键值</label>
+        <input id="raw-key" type="text" value="0x04" inputmode="text"
+               spellcheck="false" aria-label="自定义键值 (十六进制)">
+        <button id="raw-key-send" type="button">发送</button>
+      </div>
+    </section>
+
+    <details class="more-drawer">
+      <summary>
+        <span>更多设置</span>
+        <b>Image / Color / Logs</b>
+      </summary>
+
+      <div class="more-body">
+        <details class="panel accordion primary" aria-label="图像控制">
+          <summary class="section-head">
+            <span>图像</span>
+            <b>Image</b>
+          </summary>
+
+          <div class="accordion-body">
+            <article class="control-row" data-op="brightness">
+              <div class="control-copy">
+                <span>亮度</span>
+                <strong>Brightness</strong>
+              </div>
+              <button class="step" type="button" data-step="-1" data-target="brightness">−</button>
+              <label class="meter">
+                <input id="brightness" type="range" min="0" max="100" value="0">
+                <span style="--value:0%"></span>
+              </label>
+              <output id="brightness-out" class="value">--</output>
+              <button class="step" type="button" data-step="1" data-target="brightness">+</button>
+            </article>
+
+            <article class="control-row" data-op="contrast">
+              <div class="control-copy">
+                <span>对比度</span>
+                <strong>Contrast</strong>
+              </div>
+              <button class="step" type="button" data-step="-1" data-target="contrast">−</button>
+              <label class="meter">
+                <input id="contrast" type="range" min="0" max="100" value="0">
+                <span style="--value:0%"></span>
+              </label>
+              <output id="contrast-out" class="value">--</output>
+              <button class="step" type="button" data-step="1" data-target="contrast">+</button>
+            </article>
+          </div>
+        </details>
+
+        <details class="panel accordion settings" aria-label="色彩与 Gamma">
+          <summary class="section-head">
+            <span>色彩</span>
+            <b>Color / Gamma</b>
+          </summary>
+
+          <div class="accordion-body">
+            <div class="setting">
+              <div>
+                <span>色温</span>
+                <strong>Color Temp</strong>
+              </div>
+              <div id="colortemp-seg" class="seg"></div>
+            </div>
+
+            <div class="setting">
+              <div>
+                <span>Gamma</span>
+                <strong>Curve</strong>
+              </div>
+              <div id="gamma-seg" class="seg gamma"></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="log-drawer">
+          <summary>
+            <span>命令日志</span>
+            <b>Raw Frames</b>
+          </summary>
+          <div id="log" class="log-list"></div>
+        </details>
+      </div>
+    </details>
+    </div>
+    </div>
+  </main>
+
+  <script src="app.js?v=20260730a"></script>
+</body>
+</html>

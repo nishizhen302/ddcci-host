@@ -8,10 +8,17 @@ import re
 
 from backends.base import Backend, Monitor
 from backends.dxva2_backend import Dxva2Backend
+from backends.raw_usb_backend import RawUsbBackend
+from backends.gpu_i2c_backend import GpuI2CBackend
 
-# 后端注册表。Backend B (硬件调试器/低层 I2C) 落地后在此登记即可。
+# 后端注册表。
+# - dxva2  = Backend A: Windows 标准 DDC/CI, 借显卡视频通道, 依赖面板活动。
+# - rawusb = Backend B: Realtek USB ISP 小板裸 USB 管道, 旁路 I²C, 不依赖面板开着。
+# - gpu    = Backend C: 显卡原始 I²C (NVAPI/ADL 自动探测), 非标地址 0x5E 用, 南微控制台最终通道。
 _BACKENDS = {
     "dxva2": Dxva2Backend,
+    "rawusb": RawUsbBackend,
+    "gpu": GpuI2CBackend,
 }
 
 
@@ -20,12 +27,20 @@ def available_backends():
     return list(_BACKENDS)
 
 
-def select_backend(name="dxva2") -> Backend:
-    """按名取后端实例。未知名抛 ValueError。"""
+def select_backend(name="dxva2", **kwargs) -> Backend:
+    """按名取后端实例。未知名抛 ValueError。
+
+    kwargs 透传给后端构造 (如 rawusb/gpu 的 slave=0x6E);
+    后端不认识的参数回退无参构造 (dxva2 没有 slave 概念)。
+    """
     try:
-        return _BACKENDS[name]()
+        cls = _BACKENDS[name]
     except KeyError:
         raise ValueError("未知后端 %r, 可选: %s" % (name, ", ".join(_BACKENDS)))
+    try:
+        return cls(**kwargs)
+    except TypeError:
+        return cls()
 
 
 def parse_caps(caps_str):

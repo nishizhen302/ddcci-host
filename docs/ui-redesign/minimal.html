@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDCCI 控制台 · 极简未来</title>
+<style>
+  :root{
+    --bg:#eceae5; --card:#f7f6f3; --ink:#141413; --sub:#6b6862; --faint:#a6a29a;
+    --line:#dcd8d0; --line2:#e6e2db; --accent:#ff4d17; --accentink:#fff;
+    --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif;
+    --mono:'Consolas','SF Mono',ui-monospace,monospace;
+  }
+  body[data-t="dark"]{
+    --bg:#161514; --card:#1f1e1c; --ink:#f2f0ec; --sub:#9a968e; --faint:#605c55;
+    --line:#302e2b; --line2:#282624; --accent:#ff5a2c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);display:grid;place-items:center;font-family:var(--sans);color:var(--ink);padding:24px;
+       -webkit-font-smoothing:antialiased;transition:background .3s}
+  .stage{width:480px;max-width:100%}
+  .win{height:868px;background:var(--card);border-radius:22px;overflow:hidden;
+       box-shadow:0 30px 80px rgba(0,0,0,.18);display:flex;flex-direction:column}
+
+  .bar{display:flex;align-items:center;gap:12px;padding:20px 24px 0}
+  .brand{width:26px;height:26px;border-radius:8px;background:var(--accent);display:grid;place-items:center;
+         color:var(--accentink);font-weight:800;font-size:13px;font-family:var(--mono)}
+  .ttl{font-size:15px;font-weight:700;letter-spacing:-.01em}
+  .ttl small{display:block;font-size:10px;font-weight:500;color:var(--faint);letter-spacing:.14em;margin-top:1px}
+  .wbtns{margin-left:auto;display:flex;gap:4px}
+  .wb{width:30px;height:30px;border:0;background:transparent;border-radius:9px;color:var(--sub);cursor:pointer;
+      font-size:15px;display:grid;place-items:center;transition:.15s}
+  .wb:hover{background:var(--line2);color:var(--ink)}
+  .wb.x:hover{background:var(--accent);color:#fff}
+
+  .scroll{flex:1;overflow-y:auto;padding:22px 24px 20px;display:flex;flex-direction:column;gap:20px}
+  .scroll::-webkit-scrollbar{width:8px}
+  .scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+
+  /* 显示器选择 */
+  .select{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--line);
+     border-radius:14px;padding:13px 16px;cursor:pointer}
+  .select .nm{font-size:14px;font-weight:600}
+  .select .id{font-size:11px;color:var(--faint);font-family:var(--mono)}
+
+  /* 地址 + 版本 */
+  .strip{display:flex;align-items:center;gap:14px}
+  .addr{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px}
+  .addr button{border:0;background:transparent;color:var(--sub);font-family:var(--mono);font-size:12px;font-weight:600;
+     padding:7px 14px;border-radius:8px;cursor:pointer;transition:.15s}
+  .addr button.on{background:var(--ink);color:var(--card)}
+  .vers{margin-left:auto;text-align:right;font-family:var(--mono);font-size:11px;color:var(--sub)}
+  .vers b{color:var(--ink);font-weight:700}
+
+  .sec{font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
+
+  /* 滑条 */
+  .ctrl{display:flex;flex-direction:column;gap:12px}
+  .crow{display:flex;align-items:baseline;justify-content:space-between}
+  .crow .nm{font-size:14px;font-weight:600}
+  .crow .vv{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .crow .vv small{font-size:13px;color:var(--faint);font-weight:500}
+  .slider{position:relative;height:6px;background:var(--line);border-radius:3px;cursor:pointer}
+  .slider .f{position:absolute;left:0;top:0;bottom:0;background:var(--ink);border-radius:3px}
+  .slider .k{position:absolute;top:50%;width:20px;height:20px;background:var(--card);border:3px solid var(--ink);
+     border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 2px 6px rgba(0,0,0,.18)}
+
+  /* 分段 */
+  .seg{display:flex;flex-wrap:wrap;gap:8px}
+  .seg button{flex:1;min-width:58px;border:1px solid var(--line);background:var(--bg);color:var(--sub);
+     font-family:var(--mono);font-size:12px;font-weight:600;padding:11px 6px;border-radius:11px;cursor:pointer;transition:.15s}
+  .seg button:hover{border-color:var(--faint)}
+  .seg button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+
+  /* 方向键 */
+  .dpad{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .key{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:16px 4px;text-align:center;cursor:pointer;transition:.12s}
+  .key:hover{border-color:var(--faint)}
+  .key:active,.key.hit{background:var(--accent);border-color:var(--accent);transform:scale(.95)}
+  .key.hit .kl,.key.hit .ks{color:#fff}
+  .key .kl{display:block;font-size:17px;font-weight:600}
+  .key .ks{display:block;font-size:9px;color:var(--faint);margin-top:5px;letter-spacing:.1em;font-weight:600}
+
+  details.log{border-top:1px solid var(--line2);padding-top:16px}
+  details.log summary{list-style:none;cursor:pointer;font-size:11px;color:var(--faint);font-weight:600;letter-spacing:.05em}
+  details.log summary::after{content:" ›";}
+  details.log[open] summary::after{content:" ⌄"}
+  .logbody{margin-top:12px;display:flex;flex-direction:column;gap:7px;max-height:130px;overflow-y:auto}
+  .lrow{display:flex;gap:10px;font-size:11px;font-family:var(--mono);line-height:1.4}
+  .lrow .t{color:var(--faint)}
+  .lrow .ok{color:var(--accent);font-weight:600}
+  .lrow .fr{color:var(--sub)}
+</style>
+</head>
+<body data-t="light">
+<div class="stage">
+  <div class="win">
+    <div class="bar">
+      <span class="brand">D</span>
+      <span class="ttl">DDCCI 控制台<small>MONITOR CONTROL</small></span>
+      <span class="wbtns">
+        <button class="wb" title="刷新">⟳</button>
+        <button class="wb" id="skin" title="换肤">◑</button>
+        <button class="wb" title="最小化">–</button>
+        <button class="wb x" title="关闭">✕</button>
+      </span>
+    </div>
+    <div class="scroll">
+      <div class="select"><span class="nm">RTD2785 · 2560×1440</span><span class="id">[0]</span></div>
+
+      <div class="strip">
+        <div class="addr" data-toggle>
+          <button data-a="5E">0x5E</button>
+          <button data-a="6E" class="on">0x6E</button>
+        </div>
+        <div class="vers">硬件 <b>v101</b> · 软件 <b>v101</b></div>
+      </div>
+
+      <div class="sec">图像 Image</div>
+
+      <div class="ctrl" data-slider data-max="100" data-val="50">
+        <div class="crow"><span class="nm">亮度</span><span class="vv"><span class="num">50</span><small> /100</small></span></div>
+        <div class="slider"><div class="f" style="width:50%"></div><div class="k" style="left:50%"></div></div>
+      </div>
+      <div class="ctrl" data-slider data-max="100" data-val="51">
+        <div class="crow"><span class="nm">对比度</span><span class="vv"><span class="num">51</span><small> /100</small></span></div>
+        <div class="slider"><div class="f" style="width:51%"></div><div class="k" style="left:51%"></div></div>
+      </div>
+
+      <div class="ctrl">
+        <div class="crow"><span class="nm">色温</span></div>
+        <div class="seg" data-seg><button>6500K</button><button class="on">9300K</button><button>User</button></div>
+      </div>
+      <div class="ctrl">
+        <div class="crow"><span class="nm">Gamma</span></div>
+        <div class="seg" data-seg><button>γ1</button><button>γ2</button><button>γ3</button><button class="on">γ4</button><button>γ5</button><button>γ6</button><button>γ7</button></div>
+      </div>
+
+      <div class="sec">模拟按键 OSD</div>
+      <div class="dpad" data-dpad>
+        <div class="key"><span class="kl">▤</span><span class="ks">MENU</span></div>
+        <div class="key"><span class="kl">◀</span><span class="ks">LEFT</span></div>
+        <div class="key"><span class="kl">▶</span><span class="ks">RIGHT</span></div>
+        <div class="key"><span class="kl">✕</span><span class="ks">EXIT</span></div>
+      </div>
+
+      <details class="log" open>
+        <summary>命令日志 · 原始帧</summary>
+        <div class="logbody">
+          <div class="lrow"><span class="t">21:34:07</span><span class="ok">写亮度=50</span><span class="fr">6E 51 84 03 10 00 32 9A</span></div>
+          <div class="lrow"><span class="t">21:34:07</span><span class="ok">读亮度 →50/100</span><span class="fr">6E 51 82 01 10 AC</span></div>
+          <div class="lrow"><span class="t">21:33:55</span><span class="ok">按键 MENU</span><span class="fr">6E 51 84 C0 96 00 …</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('[data-slider]').forEach(g=>{
+    const track=g.querySelector('.slider'),f=g.querySelector('.f'),k=g.querySelector('.k'),num=g.querySelector('.num'),max=+g.dataset.max;
+    let drag=false;const set=e=>{const r=track.getBoundingClientRect();let v=Math.round(Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*max);
+      const p=v/max*100;f.style.width=p+'%';k.style.left=p+'%';num.textContent=v;};
+    track.addEventListener('pointerdown',e=>{drag=true;track.setPointerCapture(e.pointerId);set(e);});
+    track.addEventListener('pointermove',e=>{if(drag)set(e);});
+    track.addEventListener('pointerup',()=>drag=false);
+  });
+  document.querySelectorAll('[data-seg],[data-toggle]').forEach(s=>s.addEventListener('click',e=>{
+    if(e.target.tagName!=='BUTTON')return;s.querySelectorAll('button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');
+  }));
+  document.querySelectorAll('[data-dpad] .key').forEach(k=>k.addEventListener('click',()=>{k.classList.add('hit');setTimeout(()=>k.classList.remove('hit'),200);}));
+  document.getElementById('skin').addEventListener('click',()=>{const b=document.body;b.dataset.t=b.dataset.t==='light'?'dark':'light';});
+</script>
+</body>
+</html>

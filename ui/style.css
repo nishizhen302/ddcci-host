@@ -311,3 +311,57 @@ svg.i.sm { width: 15px; height: 15px; }
 
 :focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* 屏幕菜单: 方向键簇 (3×3 grid, 中心留空; grid 的 gap 在 QtWebEngine 不受影响) */
+.osdkeys { margin-top: 4px; }
+.dpad {
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: auto auto auto;
+  gap: 8px; max-width: 300px; margin: 0 auto;
+}
+.k-menu  { grid-column: 2; grid-row: 1; }
+.k-left  { grid-column: 1; grid-row: 2; }
+.k-right { grid-column: 3; grid-row: 2; }
+.k-exit  { grid-column: 2; grid-row: 3; }
+.dkey {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 12px 4px; border-radius: 11px; font-family: inherit; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--sur-border);
+  box-shadow: inset 0 1px 0 var(--hi); color: var(--text);
+  transition: transform .12s var(--ease), border-color .15s var(--ease),
+              background .15s var(--ease), box-shadow .2s var(--ease), color .15s var(--ease);
+}
+.dkey .kl { font-size: 16px; font-weight: 600; line-height: 1; }
+.dkey .ks { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1; }
+.dkey:hover { border-color: var(--sur-hover); }
+.dkey:active { transform: scale(.92); }
+.k-menu { background: var(--ok-soft); }       /* MENU 主键: 绿色弱底强调 */
+.k-menu .kl { color: var(--ok); }
+.dkey.press {                                  /* 按下: 绿光脉冲反馈 */
+  transform: scale(.92); border-color: var(--ok); color: var(--strong);
+  box-shadow: 0 0 0 1px var(--ok), 0 0 18px var(--ok-glow), inset 0 1px 0 var(--hi);
+}
+
+/* ============================================================
+   Win7 / QtWebEngine (Chromium 83) flex-gap 兼容补丁
+   Chromium <84 不支持 flex 容器的 gap 属性 (grid 的 gap 不受影响)。
+   下面把受影响的 flex 间距改用等效 margin 复刻; 同时把这些容器的
+   gap 归 0, 避免在支持 gap 的内核 (Win11 WebView2) 上叠成双倍间距。
+   ⇒ 两种内核下视觉一致。只针对带 gap 的 flex 容器, 不动 grid。
+   ============================================================ */
+.ttl, .winctl, .skin, .sel .ic, .chips, .chip,
+.divtxt, .ghead, .ghead .val, .pm, .seg, .raw-row { gap: 0; }
+
+.ttl > * + *           { margin-left: 11px; }
+.winctl > * + *        { margin-left: 8px; }
+.skin > * + *          { margin-left: 1px; }
+.sel .ic > * + *       { margin-left: 11px; }
+.chip + .chip          { margin-left: 8px; }   /* .chips 横向间距 */
+.chip > svg.i          { margin-right: 6px; }  /* chip 内图标 ↔ 文本 */
+.divtxt::before        { margin-right: 10px; }
+.divtxt::after         { margin-left: 10px; }
+.ghead > * + *         { margin-left: 11px; }
+.ghead .val > * + *    { margin-left: 9px; }
+.pm > * + *            { margin-left: 4px; }
+.seg > * + *           { margin-left: 2px; }
+.raw-row > * + *       { margin-left: 7px; }
+.raw-row > .raw-out    { margin-left: auto; }  /* 复位: 读数仍靠右 */

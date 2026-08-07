@@ -1,0 +1,850 @@
+:root {
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --bg: #e8eef6;
+  --window: rgba(250, 252, 255, .82);
+  --window-strong: rgba(255, 255, 255, .92);
+  --line: rgba(92, 110, 130, .18);
+  --line-strong: rgba(72, 91, 113, .24);
+  --text: #111827;
+  --subtle: #5f6b7a;
+  --muted: #94a0ae;
+  --track: #dce5ee;
+  --accent: #25c6a0;
+  --accent-2: #32b7e8;
+  --accent-soft: rgba(37, 198, 160, .14);
+  --danger: #ff5f6d;
+  --shadow: 0 22px 70px rgba(68, 91, 120, .25);
+  --small-shadow: 0 9px 30px rgba(92, 113, 139, .16);
+  --blur: blur(24px) saturate(1.25);
+
+  /* color-mix() 的预计算等价值 —— Win7 版走 QtWebEngine(Chromium 83), 不认 color-mix,
+     整条声明会被丢弃。每处 color-mix 前面都垫一条用这些变量的 fallback: 老内核只解析得了
+     fallback, 新内核(WebView2)后一条覆盖 → 两边像素一致。值是按 srgb 预乘算好的, 改主题色
+     记得连这里一起改。命名 = 源变量-百分比。 */
+  --bg-tint: #ecf1f7;                     /* bg 84% + #fff */
+  --muted-55: rgba(148, 160, 174, .55);
+  --accent-70: rgba(37, 198, 160, .7);
+  --accent-28: rgba(37, 198, 160, .28);
+  --win-62: rgba(250, 252, 255, .508);
+  --win-78: rgba(250, 252, 255, .64);
+  --win-82: rgba(250, 252, 255, .672);
+  --win-84: rgba(250, 252, 255, .689);
+  --win-88: rgba(250, 252, 255, .722);
+  --wins-72: rgba(255, 255, 255, .662);
+  --wins-86: rgba(255, 255, 255, .791);
+  --wins-94: rgba(255, 255, 255, .865);
+  --track-38: rgba(220, 229, 238, .38);
+  --track-42: rgba(220, 229, 238, .42);
+  --accent-txt-72: #1f957e;               /* accent 72% + text */
+  --accent-txt-78: #21a085;
+  --accent-txt-82: #21a78a;
+  --accent-line-42: rgba(48, 180, 154, .524);
+}
+
+[data-theme="dark"] {
+  --bg: #0f141b;
+  --window: rgba(22, 27, 36, .82);
+  --window-strong: rgba(27, 34, 45, .92);
+  --line: rgba(221, 235, 255, .10);
+  --line-strong: rgba(221, 235, 255, .16);
+  --text: #eef5ff;
+  --subtle: #a9b7c7;
+  --muted: #647283;
+  --track: #263141;
+  --accent: #3ee3b0;
+  --accent-2: #44caff;
+  --accent-soft: rgba(62, 227, 176, .13);
+  --shadow: 0 24px 80px rgba(0, 0, 0, .42);
+  --small-shadow: 0 10px 34px rgba(0, 0, 0, .25);
+
+  --bg-tint: #353a3f;
+  --muted-55: rgba(100, 114, 131, .55);
+  --accent-70: rgba(62, 227, 176, .7);
+  --accent-28: rgba(62, 227, 176, .28);
+  --win-62: rgba(22, 27, 36, .508);
+  --win-78: rgba(22, 27, 36, .64);
+  --win-82: rgba(22, 27, 36, .672);
+  --win-84: rgba(22, 27, 36, .689);
+  --win-88: rgba(22, 27, 36, .722);
+  --wins-72: rgba(27, 34, 45, .662);
+  --wins-86: rgba(27, 34, 45, .791);
+  --wins-94: rgba(27, 34, 45, .865);
+  --track-38: rgba(38, 49, 65, .38);
+  --track-42: rgba(38, 49, 65, .42);
+  --accent-txt-72: #6fe8c6;
+  --accent-txt-78: #65e7c1;
+  --accent-txt-82: #5ee6be;
+  --accent-line-42: rgba(81, 228, 186, .478);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.42 "Segoe UI", Inter, system-ui, sans-serif;
+  transition: color .32s var(--ease);
+}
+
+button, input { font: inherit; }
+button {
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* 无边框窗口: shell 铺满整窗 (DWM 负责圆角), 承载渐变背景。不再是居中的小卡片 —— 消除四周留白。 */
+.shell {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(50, 183, 232, .22), transparent 34%),
+    linear-gradient(150deg, var(--bg), var(--bg-tint));
+  background:
+    radial-gradient(circle at 20% 0%, rgba(50, 183, 232, .22), transparent 34%),
+    linear-gradient(150deg, var(--bg), color-mix(in srgb, var(--bg) 84%, #fff));
+  transition: background .32s var(--ease);
+}
+
+/* 标题栏固定顶部, 其余内容在下方滚动区滚动 (展开更多设置也能滚到) */
+.scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 12px 16px;
+}
+.scroll::-webkit-scrollbar { width: 9px; }
+.scroll::-webkit-scrollbar-thumb {
+  background: var(--muted-55);
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.scroll::-webkit-scrollbar-track { background: transparent; }
+
+.resz { position: fixed; z-index: 9999; }
+.resz.t  { top: 0; left: 9px; right: 9px; height: 5px; cursor: ns-resize; }
+.resz.b  { bottom: 0; left: 9px; right: 9px; height: 5px; cursor: ns-resize; }
+.resz.l  { left: 0; top: 9px; bottom: 9px; width: 5px; cursor: ew-resize; }
+.resz.r  { right: 0; top: 9px; bottom: 9px; width: 5px; cursor: ew-resize; }
+.resz.tl { top: 0; left: 0; width: 11px; height: 11px; cursor: nwse-resize; }
+.resz.tr { top: 0; right: 0; width: 11px; height: 11px; cursor: nesw-resize; }
+.resz.bl { bottom: 0; left: 0; width: 11px; height: 11px; cursor: nesw-resize; }
+.resz.br { bottom: 0; right: 0; width: 11px; height: 11px; cursor: nwse-resize; }
+
+.titlebar.pywebview-drag-region { cursor: default; }
+
+.titlebar {
+  flex: none;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 14px 2px 16px;
+}
+/* 标题栏整体可拖; 仅按钮本身不可拖 -> 按钮之间的空隙也能拖动窗口 */
+.brand { -webkit-user-select: none; user-select: none; }
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand strong {
+  font-size: 14px;
+  letter-spacing: .01em;
+}
+
+/* 版本号 = git 提交数, 紧跟标题。点一下检查更新; 远端有新版就变强调色 + 挂个小圆点 */
+.brand .ver {
+  font-size: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color .15s var(--ease);
+}
+.brand .ver:hover { color: var(--text); }
+.brand .ver.update { color: var(--accent); font-weight: 600; }
+.brand .ver.update::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* 「已连接」等状态紧跟标题右侧同一行, 让标题栏保持单行矮高度 */
+.brand #conn {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .02em;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 5px var(--accent-soft), 0 0 18px var(--accent-70);
+  box-shadow: 0 0 0 5px var(--accent-soft), 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.title-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--wins-86);
+  background: color-mix(in srgb, var(--window-strong) 86%, transparent);
+  border: 1px solid var(--line);
+  color: var(--subtle);
+  transition: transform .16s var(--ease), border-color .16s var(--ease), background .16s var(--ease);
+}
+
+.icon-btn:hover,
+.step:hover,
+.key-grid button:hover,
+.seg button:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+}
+
+.icon-btn.close:hover {
+  background: var(--danger);
+  color: white;
+  border-color: transparent;
+}
+
+/* 换肤按钮: 复用 .icon-btn 的 28x28 圆框, 内部按当前主题显示 月亮(深色)/太阳(浅色) 图标 */
+.theme-toggle { display: grid; place-items: center; padding: 0; }
+.theme-toggle .moon,
+.theme-toggle .sun { display: inline-flex; align-items: center; justify-content: center; }
+.theme-toggle .ic { width: 15px; height: 15px; }
+.theme-toggle .sun { display: none; }
+[data-theme="light"] .theme-toggle .moon { display: none; }
+[data-theme="light"] .theme-toggle .sun { display: inline-flex; }
+
+.connect-strip,
+.panel,
+.log-drawer,
+.more-drawer {
+  border: 1px solid var(--line);
+  background: var(--window-strong);
+  box-shadow: var(--small-shadow);
+}
+
+.connect-strip {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border-radius: 16px;
+}
+
+.connect-strip .target-picker {
+  grid-column: 1 / -1;
+}
+
+.eyebrow,
+.section-head span,
+.setting span,
+.control-copy span,
+.log-drawer summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.monitor strong,
+.target-picker strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.target-picker {
+  position: relative;
+  min-width: 0;
+}
+
+.target-picker summary {
+  display: block;
+  list-style: none;
+  cursor: pointer;
+  padding: 7px 34px 7px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 11px;
+  background: var(--win-62);
+  background: color-mix(in srgb, var(--window) 62%, transparent);
+  transition: border-color .16s var(--ease), background .16s var(--ease);
+}
+
+/* 去掉「当前目标」标签后, 下拉框只剩目标名一行, 去掉顶距使其在框内居中 */
+.target-picker summary strong { margin-top: 0; }
+
+.target-picker summary:hover {
+  border-color: var(--accent);
+  background: var(--win-88);
+  background: color-mix(in srgb, var(--window) 88%, transparent);
+}
+
+.target-picker[open] summary { border-color: var(--accent); }
+
+.target-picker summary::-webkit-details-marker { display: none; }
+
+.target-picker summary::after {
+  content: "⌄";
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-55%);
+  color: var(--muted);
+  font-size: 13px;
+  transition: transform .18s var(--ease);
+}
+
+.target-picker[open] summary::after {
+  transform: translateY(-55%) rotate(180deg);
+}
+
+.target-menu {
+  position: absolute;
+  z-index: 20;
+  left: -4px;
+  top: calc(100% + 11px);
+  width: min(360px, calc(100vw - 48px));
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--wins-94);
+  background: color-mix(in srgb, var(--window-strong) 94%, transparent);
+  box-shadow: 0 18px 46px rgba(64, 83, 105, .24);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+}
+
+.target-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
+  transition: background .16s var(--ease), transform .16s var(--ease);
+}
+
+.target-option:hover {
+  transform: translateY(-1px);
+  background: var(--track-38);
+  background: color-mix(in srgb, var(--track) 38%, transparent);
+}
+
+.target-option.active {
+  background: var(--accent-soft);
+}
+
+.target-option b {
+  display: block;
+  font-size: 12px;
+}
+
+.target-option small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.target-option em {
+  flex: none;
+  min-width: 36px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--win-78);
+  background: color-mix(in srgb, var(--window) 78%, transparent);
+  color: var(--subtle);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 650;
+}
+
+.target-option.active em {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white;
+}
+
+.target-menu p {
+  margin: 7px 4px 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.chip-row {
+  display: flex;
+  gap: 7px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-txt-72);
+  color: color-mix(in srgb, var(--accent) 72%, var(--text));
+  font-weight: 650;
+  font-size: 11px;
+}
+
+.chip.soft {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--subtle);
+  font-weight: 500;
+}
+
+.panel {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 17px;
+}
+
+.section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+}
+
+.section-head b {
+  color: var(--subtle);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.accordion {
+  padding: 0;
+  overflow: hidden;
+}
+
+.accordion summary {
+  list-style: none;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.accordion summary::-webkit-details-marker { display: none; }
+
+.accordion summary::after {
+  content: "⌄";
+  margin-left: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  transition: transform .18s var(--ease);
+}
+
+.accordion[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.accordion-body {
+  padding: 0 12px 12px;
+}
+
+.remote .section-head {
+  margin-bottom: 9px;
+}
+
+.control-row {
+  display: grid;
+  grid-template-columns: 92px 28px 1fr 44px 28px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 0;
+}
+
+.control-row + .control-row { border-top: 1px solid var(--line); }
+
+.control-copy strong,
+.setting strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.step {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--win-82);
+  background: color-mix(in srgb, var(--window) 82%, transparent);
+  color: var(--subtle);
+  font-size: 17px;
+  transition: transform .16s var(--ease), border-color .16s var(--ease);
+}
+
+.value {
+  justify-self: end;
+  min-width: 42px;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.meter {
+  position: relative;
+  display: block;
+  height: 24px;
+}
+
+.meter input {
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: 2;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.meter span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 6px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background:
+    linear-gradient(90deg, var(--accent), var(--accent-2)) 0 / var(--value) 100% no-repeat,
+    var(--track);
+}
+
+.meter span::after {
+  content: "";
+  position: absolute;
+  left: var(--value);
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--window-strong);
+  border: 4px solid var(--accent);
+  box-shadow: 0 5px 18px rgba(37, 198, 160, .28);
+  transform: translate(-50%, -50%);
+}
+
+.settings .accordion-body {
+  display: grid;
+  gap: 10px;
+}
+
+.setting {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--track-42);
+  background: color-mix(in srgb, var(--track) 42%, transparent);
+}
+
+.seg button {
+  flex: 1;
+  min-width: 0;
+  height: 29px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--subtle);
+  font-size: 12px;
+  transition: transform .16s var(--ease), background .16s var(--ease), color .16s var(--ease);
+}
+
+.seg button.active {
+  color: white;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 8px 18px var(--accent-28);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.seg.compact {
+  width: 112px;
+  padding: 3px;
+}
+
+.seg.compact button {
+  height: 25px;
+}
+
+.gamma button {
+  font-size: 11px;
+  padding: 0;
+}
+
+.key-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+}
+
+.key-grid button {
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--win-84);
+  background: color-mix(in srgb, var(--window) 84%, transparent);
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  transition: transform .16s var(--ease), border-color .16s var(--ease), background .16s var(--ease);
+}
+
+.key-grid button:first-child {
+  color: var(--accent-txt-78);
+  color: color-mix(in srgb, var(--accent) 78%, var(--text));
+  background: var(--accent-soft);
+}
+
+.key-grid button:active,
+.step:active,
+.seg button:active {
+  transform: translateY(0) scale(.97);
+}
+
+/* 按键宏行: 进入工厂菜单 / 开启老化 并排 */
+.macro-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.macro-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--accent-line-42);
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  background: var(--accent-soft);
+  color: var(--accent-txt-82);
+  color: color-mix(in srgb, var(--accent) 82%, var(--text));
+  transition: transform .16s var(--ease), border-color .16s var(--ease), opacity .16s var(--ease);
+}
+
+.macro-btn span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+
+.macro-btn b {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--subtle);
+  letter-spacing: .02em;
+}
+
+.macro-btn:hover { transform: translateY(-1px); border-color: var(--line-strong); }
+.macro-btn:active { transform: translateY(0) scale(.98); }
+.macro-btn:disabled { opacity: .55; transform: none; cursor: default; }
+
+/* 自定义键值行: 逆向 OK 等未知键时逐值试发 */
+.raw-key-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.raw-key-row label {
+  font-size: 11px;
+  color: var(--subtle);
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.raw-key-row input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--win-84);
+  background: color-mix(in srgb, var(--window) 84%, transparent);
+  color: var(--text);
+  font: 600 12px/1 ui-monospace, Consolas, monospace;
+  letter-spacing: .06em;
+}
+
+.raw-key-row input:focus {
+  outline: none;
+  border-color: var(--line-strong);
+}
+
+.raw-key-row button {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--accent-soft);
+  color: var(--accent-txt-78);
+  color: color-mix(in srgb, var(--accent) 78%, var(--text));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  transition: transform .16s var(--ease), border-color .16s var(--ease);
+}
+
+.raw-key-row button:hover { transform: translateY(-1px); border-color: var(--line-strong); }
+.raw-key-row button:active { transform: translateY(0) scale(.97); }
+
+.log-drawer {
+  margin-top: 10px;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.more-drawer {
+  margin-top: 10px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.more-drawer > summary,
+.log-drawer summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.more-drawer > summary::-webkit-details-marker,
+.log-drawer summary::-webkit-details-marker { display: none; }
+.more-drawer > summary::after,
+.log-drawer summary::after {
+  content: "⌄";
+  color: var(--muted);
+  transition: transform .18s var(--ease);
+}
+.more-drawer[open] > summary::after,
+.log-drawer[open] summary::after { transform: rotate(180deg); }
+.more-drawer > summary span,
+.log-drawer summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.more-drawer > summary b,
+.log-drawer summary b { color: var(--subtle); font-size: 12px; }
+
+.more-body {
+  padding: 0 10px 10px;
+}
+
+.more-body .panel,
+.more-body .log-drawer {
+  margin-top: 8px;
+  box-shadow: none;
+  background: var(--wins-72);
+  background: color-mix(in srgb, var(--window-strong) 72%, transparent);
+}
+
+.log-list {
+  display: grid;
+  gap: 1px;
+  padding: 0 12px 12px;
+}
+
+.log-list p {
+  display: grid;
+  grid-template-columns: 64px 64px 1fr;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 8px;
+  border-top: 1px solid var(--line);
+  color: var(--subtle);
+  font-size: 12px;
+}
+
+.log-list code {
+  overflow: hidden;
+  color: var(--muted);
+  font: 12px/1.45 Consolas, "SFMono-Regular", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 仅在真正很窄时才重排为单列 (无边框窗口默认 500 宽, 不该触发) —— 断点从 560 降到 400,
+   并移除 body padding / shell 圆角: 那会让 shell 缩进、四周露出背景 = "外围一圈"。 */
+@media (max-width: 400px) {
+  .connect-strip { grid-template-columns: 1fr; }
+  .chip-row { flex-wrap: wrap; }
+  .control-row { grid-template-columns: 1fr 32px 32px; }
+  .control-copy, .meter, .value { grid-column: 1 / -1; }
+  .value { justify-self: start; }
+  .setting { grid-template-columns: 1fr; }
+  .key-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ============================================================
+   Win7 / QtWebEngine (Chromium 83) flex-gap 兼容补丁
+   Chromium <84 不支持 flex 容器的 gap (grid 的 gap 不受影响, 不用管)。
+   下面把受影响的 flex 间距改用等效 margin 复刻; 同时把这些容器的 gap 归 0,
+   避免在支持 gap 的内核 (Win11 WebView2) 上叠成双倍间距 ⇒ 两边视觉一致。
+   ============================================================ */
+.brand, .title-actions, .target-option, .chip-row, .seg, .macro-btn, .raw-key-row { gap: 0; }
+
+.brand > * + *          { margin-left: 10px; }
+.brand .ver             { margin-left: 5px; }  /* 版本号紧跟标题, 不占整格 */
+.title-actions > * + *  { margin-left: 7px; }
+.target-option > * + *  { margin-left: 12px; }
+.chip-row > * + *       { margin-left: 7px; }
+.seg > * + *            { margin-left: 4px; }
+.macro-btn > * + *      { margin-top: 3px; }   /* 纵向 flex */
+.raw-key-row > * + *    { margin-left: 7px; }
