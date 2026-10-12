@@ -263,6 +263,47 @@ function buildRaw(code) {
   return row;
 }
 
+// =================== 屏幕菜单方向键 ===================
+// 动作型控件: 注入 VCP 0xF0 (键码与固件 RTD2014Ddcci.c case 对应)。
+// 不走 caps (0xF0 故意不在 caps 串里), 选中显示器后固定显示。
+const OSD_KEY_VCP = 0xf0;
+const OSD_KEYS = [
+  { code: 1, label: "MENU", sub: "进入·确认", cls: "k-menu" },
+  { code: 3, label: "◀",    sub: "左 / −",    cls: "k-left" },
+  { code: 4, label: "▶",    sub: "右 / +",    cls: "k-right" },
+  { code: 2, label: "EXIT", sub: "退出",      cls: "k-exit" },
+];
+
+async function pressKey(code, label, btn) {
+  if (!CUR) return;
+  btn.classList.add("press");
+  setTimeout(() => btn.classList.remove("press"), 170);
+  const r = await api.set(OSD_KEY_VCP, code);  // 只写 VCP, 不回读
+  if (r && r.ok) setConn(`${CUR.model || CUR.description} · 已连接`, "ok");
+  else setConn(`按键 ${label} 已发送 · 看屏幕`, "idle");
+}
+
+function buildOsdKeys() {
+  const wrap = $("#osdkeys");
+  wrap.innerHTML = "";
+  if (!CUR) return;
+  const div = document.createElement("div");
+  div.className = "divtxt"; div.textContent = "屏幕菜单";
+  wrap.appendChild(div);
+
+  const pad = document.createElement("div");
+  pad.className = "dpad";
+  OSD_KEYS.forEach((key) => {
+    const b = document.createElement("button");
+    b.className = "dkey " + key.cls;
+    b.innerHTML = `<span class="kl">${key.label}</span><span class="ks">${key.sub}</span>`;
+    b.title = `${key.label} · ${key.sub}`;
+    b.addEventListener("click", () => pressKey(key.code, key.label, b));
+    pad.appendChild(b);
+  });
+  wrap.appendChild(pad);
+}
+
 // =================== 渲染 ===================
 
 function parseRes(desc) {
@@ -315,6 +356,9 @@ async function renderControls(mon) {
     cont.appendChild(p);
   }
 
+  // 屏幕菜单方向键 (固定区, 不依赖 caps)
+  buildOsdKeys();
+
   // raw 兜底
   const known = new Set([...MAIN_ORDER, SIGNAL_VCP]);
   const rawCodes = [...codes].filter((c) => !known.has(c)).sort((a, b) => a - b);
@@ -349,6 +393,7 @@ async function refresh() {
     if (!MONITORS.length) {
       setConn("未扫到显示器 · 请接独显输出并开 DDC/CI", "warn");
       $("#chips").innerHTML = ""; $("#controls").innerHTML = ""; $("#advanced").hidden = true;
+      $("#osdkeys").innerHTML = "";
       $("#sel-name").textContent = "—"; $("#sel-id").textContent = "";
       CUR = null;
       return;

@@ -1,3 +1,4 @@
-# DDC/CI 控制台 运行依赖
-# 其余均为 Python 标准库 (os/sys/ctypes/threading/...) 与本地模块
+# DDC/CI controller runtime dependencies.
+# Win11 package uses the system Edge/WebView2 runtime through pywebview.
 pywebview==6.2.1
+PyInstaller==6.20.0

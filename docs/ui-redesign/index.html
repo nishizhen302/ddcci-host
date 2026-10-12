@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDCCI 控制台 · UI 方案对比</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0d0f12;color:#e8ecf2;font-family:'Segoe UI',system-ui,sans-serif;padding:28px 24px 48px}
+  h1{font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .sub{color:#7d8590;font-size:13px;margin-top:6px;margin-bottom:26px;line-height:1.6}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;max-width:1500px;margin:0 auto}
+  @media(max-width:1100px){.grid{grid-template-columns:1fr}}
+  .col{background:#15181d;border:1px solid #23272e;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .head{padding:16px 18px;border-bottom:1px solid #23272e}
+  .head .tag{font-size:10px;letter-spacing:.16em;color:#6b7280;text-transform:uppercase}
+  .head h2{font-size:16px;font-weight:700;margin:5px 0 6px}
+  .head p{font-size:12px;color:#9aa4b1;line-height:1.5}
+  .preview{position:relative;height:520px;overflow:hidden;background:#0a0c10;border-bottom:1px solid #23272e}
+  .preview iframe{position:absolute;top:0;left:50%;width:480px;height:868px;border:0;
+     transform:translateX(-50%) scale(.6);transform-origin:top center}
+  .act{padding:14px 18px;display:flex;gap:10px;align-items:center}
+  .btn{flex:1;text-align:center;text-decoration:none;background:#e8ecf2;color:#0d0f12;font-weight:600;font-size:13px;
+     padding:10px;border-radius:9px;transition:.15s}
+  .btn:hover{background:#fff}
+  .btn.ghost{background:transparent;border:1px solid #33383f;color:#c3cad3}
+  .btn.ghost:hover{border-color:#5a626c}
+  .note{max-width:1500px;margin:26px auto 0;font-size:12.5px;color:#7d8590;line-height:1.7;
+     background:#12151a;border:1px solid #23272e;border-radius:12px;padding:16px 18px}
+</style>
+</head>
+<body>
+  <h1>DDCCI 控制台 — UI 重设计方案对比</h1>
+  <div class="sub">三个方向都是完整可交互样机(滑条能拖、分段/按键能点、mock 数据)。缩略图是等比缩小的实窗，点「单独打开」看 1:1 效果。</div>
+  <div class="grid">
+    <div class="col">
+      <div class="head"><span class="tag">Direction A</span><h2>航天 HUD 仪表盘</h2>
+        <p>军工/航天仪表美学：荧光青绿、精密网格、示波器式电平条、HUD 角框、等宽字。硬核工程师气质。</p></div>
+      <div class="preview"><iframe src="hud.html" scrolling="no"></iframe></div>
+      <div class="act"><a class="btn" href="hud.html" target="_blank">单独打开</a></div>
+    </div>
+    <div class="col">
+      <div class="head"><span class="tag">Direction B</span><h2>极简未来</h2>
+        <p>Teenage Engineering / Braun 风：大留白、精密排版、克制的橙色强调、圆润按键。高级、安静、时尚。支持明暗皮肤(点 ◑)。</p></div>
+      <div class="preview"><iframe src="minimal.html" scrolling="no"></iframe></div>
+      <div class="act"><a class="btn" href="minimal.html" target="_blank">单独打开</a></div>
+    </div>
+    <div class="col">
+      <div class="head"><span class="tag">Direction C</span><h2>玻璃拟态</h2>
+        <p>毛玻璃层叠 + 流动彩色光斑 + 渐变强调。现代、通透、时尚，偏消费电子/苹果风。</p></div>
+      <div class="preview"><iframe src="glass.html" scrolling="no"></iframe></div>
+      <div class="act"><a class="btn" href="glass.html" target="_blank">单独打开</a></div>
+    </div>
+  </div>
+  <div class="note">
+    三个都保留了全部功能：显示器下拉、IIC 地址 0x5E/0x6E 切换、亮度/对比度、色温/Gamma、模拟按键、版本、命令日志、无边框窗口。
+    挑一个方向（或说「A 的配色 + B 的布局」这类组合），我再精修成定稿并替换掉现有 <code>ui/nanwei</code>。
+  </div>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDCCI 控制台 · 航天 HUD</title>
+<style>
+  :root{
+    --bg:#05090c; --panel:#070d12; --grid:rgba(70,232,196,.055);
+    --ph:#46e8c4; --ph-dim:#1f5e52; --ph-glow:rgba(70,232,196,.45);
+    --amber:#ffb454; --red:#ff5d6c;
+    --ink:#8fb5b0; --ink-strong:#d4faf2; --muted:#4a6b66; --line:rgba(70,232,196,.16);
+    --mono:'Consolas','SF Mono','JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:#141618;display:grid;place-items:center;font-family:var(--mono);color:var(--ink);
+       padding:24px;-webkit-font-smoothing:antialiased}
+  .stage{width:480px;max-width:100%}
+  .win{position:relative;height:868px;background:
+        radial-gradient(120% 80% at 50% -10%,rgba(70,232,196,.06),transparent 60%),
+        linear-gradient(180deg,#070d11,#04070a);
+       border:1px solid var(--line);border-radius:16px;overflow:hidden;
+       box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 0 1px rgba(70,232,196,.04) inset}
+  /* 精密网格底纹 */
+  .win::before{content:"";position:absolute;inset:0;pointer-events:none;
+     background-image:linear-gradient(var(--grid) 1px,transparent 1px),
+                      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+     background-size:26px 26px;mask:radial-gradient(130% 100% at 50% 0,#000 55%,transparent)}
+  /* HUD 四角框 */
+  .corner{position:absolute;width:22px;height:22px;border:2px solid var(--ph);opacity:.5;z-index:3;pointer-events:none}
+  .corner.tl{top:12px;left:12px;border-right:0;border-bottom:0}
+  .corner.tr{top:12px;right:12px;border-left:0;border-bottom:0}
+  .corner.bl{bottom:12px;left:12px;border-right:0;border-top:0}
+  .corner.br{bottom:12px;right:12px;border-left:0;border-top:0}
+
+  .inner{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;padding:22px 22px 18px}
+
+  /* 顶栏 */
+  .bar{display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ph);box-shadow:0 0 10px var(--ph-glow);position:relative}
+  .dot::after{content:"";position:absolute;inset:-5px;border:1px solid var(--ph);border-radius:50%;opacity:.4;animation:ping 2.4s ease-out infinite}
+  @keyframes ping{0%{transform:scale(.6);opacity:.6}100%{transform:scale(1.9);opacity:0}}
+  .ttl{font-size:12.5px;letter-spacing:.22em;color:var(--ink-strong);font-weight:600}
+  .ttl b{color:var(--ph)}
+  .status{font-size:10px;letter-spacing:.16em;color:var(--muted);margin-left:2px}
+  .wbtns{margin-left:auto;display:flex;gap:6px}
+  .wb{width:26px;height:22px;border:1px solid var(--line);background:transparent;color:var(--ink);
+      border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:12px;display:grid;place-items:center;transition:.15s}
+  .wb:hover{border-color:var(--ph);color:var(--ph);box-shadow:0 0 12px rgba(70,232,196,.2)}
+  .wb.x:hover{border-color:var(--red);color:var(--red);box-shadow:0 0 12px rgba(255,93,108,.25)}
+
+  .scroll{flex:1;overflow-y:auto;padding-top:16px;display:flex;flex-direction:column;gap:15px}
+  .scroll::-webkit-scrollbar{width:6px}
+  .scroll::-webkit-scrollbar-thumb{background:var(--ph-dim);border-radius:3px}
+
+  /* 选择器 (显示器) */
+  .field{border:1px solid var(--line);border-radius:9px;background:rgba(70,232,196,.03);padding:11px 13px;position:relative}
+  .flabel{font-size:9px;letter-spacing:.2em;color:var(--muted);margin-bottom:5px}
+  .select{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+  .select .name{color:var(--ink-strong);font-size:13px}
+  .select .car{color:var(--ph)}
+
+  /* 地址切换 + 版本, 并排 readout */
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .readout{border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:rgba(70,232,196,.03)}
+  .readout .flabel{margin-bottom:7px}
+  .toggle{display:flex;gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .toggle button{flex:1;background:transparent;border:0;color:var(--muted);font-family:var(--mono);font-size:12px;
+     padding:6px 0;cursor:pointer;letter-spacing:.08em;transition:.15s}
+  .toggle button.on{background:var(--ph);color:#04120e;font-weight:700;box-shadow:0 0 16px var(--ph-glow)}
+  .ver{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-strong)}
+  .ver span{color:var(--muted);font-size:9px;letter-spacing:.12em}
+
+  .divider{display:flex;align-items:center;gap:10px;font-size:9px;letter-spacing:.26em;color:var(--muted);margin-top:4px}
+  .divider::before,.divider::after{content:"";height:1px;flex:1;background:var(--line)}
+
+  /* 电平条 (亮度/对比度) —— 示波器风 */
+  .gauge{border:1px solid var(--line);border-radius:10px;padding:13px 14px;background:linear-gradient(180deg,rgba(70,232,196,.04),transparent)}
+  .ghead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px}
+  .ghead .lab{font-size:11px;letter-spacing:.14em;color:var(--ink-strong)}
+  .ghead .val{font-family:var(--mono);font-size:22px;color:var(--ph);text-shadow:0 0 14px var(--ph-glow);font-weight:600}
+  .ghead .val small{font-size:11px;color:var(--muted);text-shadow:none}
+  .bar-track{position:relative;height:30px;border:1px solid var(--line);border-radius:5px;background:
+     repeating-linear-gradient(90deg,transparent,transparent 9px,rgba(70,232,196,.07) 9px,rgba(70,232,196,.07) 10px);
+     cursor:pointer;overflow:hidden}
+  .bar-fill{position:absolute;top:0;bottom:0;left:0;background:
+     linear-gradient(90deg,rgba(70,232,196,.25),var(--ph));box-shadow:0 0 20px var(--ph-glow);
+     border-right:2px solid var(--ink-strong)}
+  .bar-fill::after{content:"";position:absolute;top:0;bottom:0;right:0;width:14px;background:linear-gradient(90deg,transparent,rgba(212,250,242,.5))}
+
+  /* 分段 (色温/gamma) */
+  .seg{display:flex;flex-wrap:wrap;gap:7px}
+  .seg button{flex:1;min-width:56px;background:rgba(70,232,196,.03);border:1px solid var(--line);color:var(--ink);
+     font-family:var(--mono);font-size:12px;padding:9px 4px;border-radius:6px;cursor:pointer;letter-spacing:.05em;
+     position:relative;transition:.15s}
+  .seg button:hover{border-color:var(--ph-dim);color:var(--ink-strong)}
+  .seg button.on{border-color:var(--ph);color:var(--ph);background:rgba(70,232,196,.1);
+     box-shadow:0 0 16px rgba(70,232,196,.25),inset 0 0 12px rgba(70,232,196,.08)}
+  .seg button.on::before,.seg button.on::after{content:"";position:absolute;width:6px;height:6px;border-color:var(--ph);border-style:solid}
+  .seg button.on::before{top:3px;left:3px;border-width:1px 0 0 1px}
+  .seg button.on::after{bottom:3px;right:3px;border-width:0 1px 1px 0}
+
+  /* 方向键 */
+  .dpad{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .key{background:rgba(70,232,196,.03);border:1px solid var(--line);border-radius:8px;padding:13px 4px;cursor:pointer;
+       text-align:center;transition:.12s;position:relative;overflow:hidden}
+  .key:hover{border-color:var(--ph-dim)}
+  .key .kl{display:block;font-size:15px;color:var(--ink-strong);letter-spacing:.06em}
+  .key .ks{display:block;font-size:8px;color:var(--muted);margin-top:4px;letter-spacing:.12em}
+  .key:active,.key.hit{border-color:var(--ph);box-shadow:0 0 20px var(--ph-glow);background:rgba(70,232,196,.12)}
+  .key.hit .kl{color:var(--ph)}
+
+  /* 日志 */
+  details.log{border:1px solid var(--line);border-radius:9px;background:rgba(0,0,0,.25);overflow:hidden}
+  details.log summary{list-style:none;cursor:pointer;padding:10px 13px;font-size:10px;letter-spacing:.18em;color:var(--muted);display:flex;align-items:center;gap:8px}
+  details.log summary::before{content:"▸";color:var(--ph)}
+  details.log[open] summary::before{content:"▾"}
+  .logbody{padding:0 13px 12px;display:flex;flex-direction:column;gap:5px;max-height:150px;overflow-y:auto}
+  .lrow{display:flex;gap:9px;font-size:10.5px;line-height:1.5}
+  .lrow .t{color:var(--muted)}
+  .lrow .ok{color:var(--ph)}
+  .lrow .fr{color:var(--ink);opacity:.7}
+  .foot{padding-top:12px;text-align:center;font-size:8.5px;letter-spacing:.24em;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="win">
+    <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+    <div class="inner">
+      <div class="bar">
+        <span class="dot"></span>
+        <span class="ttl"><b>DDCCI</b> CONTROL</span>
+        <span class="status">// LINK OK</span>
+        <span class="wbtns">
+          <button class="wb" title="刷新">⟳</button>
+          <button class="wb" title="换肤">◑</button>
+          <button class="wb" title="最小化">—</button>
+          <button class="wb x" title="关闭">✕</button>
+        </span>
+      </div>
+      <div class="scroll">
+        <div class="field">
+          <div class="flabel">TARGET DISPLAY</div>
+          <div class="select"><span class="name">[0] RTD2785 · 2560×1440</span><span class="car">▼</span></div>
+        </div>
+
+        <div class="row2">
+          <div class="readout">
+            <div class="flabel">IIC ADDR</div>
+            <div class="toggle" data-toggle>
+              <button data-a="5E">0x5E</button>
+              <button data-a="6E" class="on">0x6E</button>
+            </div>
+          </div>
+          <div class="readout">
+            <div class="flabel">FIRMWARE</div>
+            <div class="ver"><div>HW v101 <span>硬件</span></div><div>SW v101 <span>软件</span></div></div>
+          </div>
+        </div>
+
+        <div class="divider">IMAGE</div>
+
+        <div class="gauge" data-gauge data-max="100" data-val="50">
+          <div class="ghead"><span class="lab">BRIGHTNESS 亮度</span><span class="val"><span class="num">50</span><small>/100</small></span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:50%"></div></div>
+        </div>
+        <div class="gauge" data-gauge data-max="100" data-val="51">
+          <div class="ghead"><span class="lab">CONTRAST 对比度</span><span class="val"><span class="num">51</span><small>/100</small></span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:51%"></div></div>
+        </div>
+
+        <div class="gauge">
+          <div class="ghead"><span class="lab">COLOR TEMP 色温</span></div>
+          <div class="seg" data-seg>
+            <button>6500K</button><button class="on">9300K</button><button>User</button>
+          </div>
+        </div>
+        <div class="gauge">
+          <div class="ghead"><span class="lab">GAMMA</span></div>
+          <div class="seg" data-seg>
+            <button>γ1</button><button>γ2</button><button>γ3</button><button class="on">γ4</button><button>γ5</button><button>γ6</button><button>γ7</button>
+          </div>
+        </div>
+
+        <div class="divider">OSD KEYS</div>
+        <div class="dpad" data-dpad>
+          <div class="key"><span class="kl">▤</span><span class="ks">MENU</span></div>
+          <div class="key"><span class="kl">◀</span><span class="ks">LEFT</span></div>
+          <div class="key"><span class="kl">▶</span><span class="ks">RIGHT</span></div>
+          <div class="key"><span class="kl">✕</span><span class="ks">EXIT</span></div>
+        </div>
+
+        <details class="log" open>
+          <summary>COMMAND LOG · 原始帧</summary>
+          <div class="logbody">
+            <div class="lrow"><span class="t">21:34:07</span><span class="ok">写亮度=50</span><span class="fr">6E 51 84 03 10 00 32 9A</span></div>
+            <div class="lrow"><span class="t">21:34:07</span><span class="ok">读亮度→50/100</span><span class="fr">6E 51 82 01 10 AC</span></div>
+            <div class="lrow"><span class="t">21:33:55</span><span class="ok">按键 MENU</span><span class="fr">6E 51 84 C0 96 00 00 …</span></div>
+          </div>
+        </details>
+        <div class="foot">RTUSB · 0x6E · DDC/CI OVER I²C</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // 电平条拖动
+  document.querySelectorAll('[data-gauge]').forEach(g=>{
+    const track=g.querySelector('.bar-track'),fill=g.querySelector('.bar-fill'),num=g.querySelector('.num'),max=+g.dataset.max;
+    let drag=false;
+    const set=e=>{const r=track.getBoundingClientRect();let v=Math.round(Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*max);
+      fill.style.width=(v/max*100)+'%';num.textContent=v;};
+    track.addEventListener('pointerdown',e=>{drag=true;track.setPointerCapture(e.pointerId);set(e);});
+    track.addEventListener('pointermove',e=>{if(drag)set(e);});
+    track.addEventListener('pointerup',()=>drag=false);
+  });
+  // 分段
+  document.querySelectorAll('[data-seg]').forEach(s=>s.addEventListener('click',e=>{
+    if(e.target.tagName!=='BUTTON')return;s.querySelectorAll('button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');
+  }));
+  // 地址切换
+  document.querySelectorAll('[data-toggle]').forEach(t=>t.addEventListener('click',e=>{
+    if(e.target.tagName!=='BUTTON')return;t.querySelectorAll('button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');
+  }));
+  // 方向键反馈
+  document.querySelectorAll('[data-dpad] .key').forEach(k=>k.addEventListener('click',()=>{
+    k.classList.add('hit');setTimeout(()=>k.classList.remove('hit'),200);
+  }));
+</script>
+</body>
+</html>
