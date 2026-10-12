@@ -124,3 +124,25 @@ def test_css_is_chromium83_safe():
     assert "aspect-ratio" not in css
     assert not re.search(r"(^|[;{\s])gap\s*:", css), "用了 gap:, 改成 grid-gap 或 margin"
     assert not re.search(r"(^|[;{\s])inset\s*:", css), "用了 inset 简写, 改成 left/top/right/bottom"
+
+
+def test_standard_monitor_hides_keys_and_choices():
+    """标准显示器 (系统 DDC/CI) 只有亮度/对比度: OSD 按键与色温/Gamma 方块按 features 显隐。"""
+    html = _html()
+    remote = html[html.index('class="module remote"') - 30:html.index('class="module remote"') + 60]
+    assert 'data-feature="keys"' in remote
+    tiles = html[:html.index('id="t-colortemp"')]
+    assert tiles.rstrip().rsplit("<div", 1)[1].count('data-feature="choices"') == 1
+    js = _js()
+    assert '[data-feature]' in js
+    assert 'hasFeature("choices")' in js and 'hasFeature("keys")' in js
+    assert 'dxva2: "系统 DDC/CI"' in js
+
+
+def test_qt_waits_for_webchannel_before_first_call():
+    """Win7 (Qt) 版: 通道没建好就调接口会永远挂起 -> 就绪判断必须看 _QWebChannel。"""
+    js = _js()
+    ready = js[js.index("const bridgeReady"):js.index("const bridge =")]
+    assert "qtwebengine" in ready and "_QWebChannel" in ready
+    boot = js[js.index("requestAnimationFrame(() => setTimeout"):]
+    assert "!window.pywebview" in boot        # 演示数据只给浏览器直接打开用

@@ -36,14 +36,18 @@ def _default_settings_path():
 
 def _err(e, backend=None):
     hint = None
-    if isinstance(e, RuntimeError):
+    if isinstance(e, NotImplementedError):
+        # 必须先判: NotImplementedError 是 RuntimeError 的子类。自带说明的 (机型不支持) 不再加提示
+        if not str(e):
+            hint = "当前后端不支持该操作, 切 rawusb 后端。"
+    elif isinstance(e, RuntimeError):
         if backend == "gpu":
             # 英伟达机走的是 32 位 helper 子进程 (64 位 nvapi 是死路), 分层排障靠 nvscan
             hint = "显卡通道不通: 跑 nanwei_cli.py nvscan 看 helper 起没起来、哪块屏应答。"
+        elif backend == "dxva2":
+            hint = "系统 DDC/CI 不通: 确认显示器 OSD 里 DDC/CI 已打开、线材带 DDC。"
         else:
             hint = "确认 USB 小板已插好、未被烧录工具独占。"
-    elif isinstance(e, NotImplementedError):
-        hint = "当前后端不支持该操作, 切 rawusb 后端。"
     return {"ok": False, "error": str(e) or e.__class__.__name__, "hint": hint}
 
 
@@ -122,7 +126,7 @@ class Api:
             return _err(e)
 
     def _model_cls(self):
-        return nw.Monitor216 if self._model == "216" else nw.NanweiMonitor
+        return {"216": nw.Monitor216, "std": nw.MonitorStd}.get(self._model, nw.NanweiMonitor)
 
     # ---- 连接 / 选显示器 ----
     def discover_targets(self):
@@ -147,13 +151,16 @@ class Api:
                         live.append(m)
                 for m in live:
                     tid = "%s:0x%02X:%s" % (name, slave, m.id)
+                    # 系统 DDC/CI 只有标准 VCP 语义, 发不了 0xC0 自定义帧 -> 一律按标准显示器控。
+                    # (南微 0x5E 走不到这条; 216pin 要用长按/Gamma 得走 USB 小板或显卡通道。)
+                    model = "std" if name == "dxva2" else nw.detect_model(be, m.id)
                     targets.append({
                         "id": tid,
                         "backend": name,
                         "address": "0x%02X" % slave,
                         "mon_id": m.id,
                         "description": m.description,
-                        "model": nw.detect_model(be, m.id),
+                        "model": model,
                         "recommended": name == "rawusb",
                     })
             except Exception as e:
@@ -166,11 +173,14 @@ class Api:
                         pass
 
         backends = [self._backend_name]
-        for name in ("rawusb", "gpu"):
+        for name in ("rawusb", "gpu", "dxva2"):
             if name not in backends:
                 backends.append(name)
         slaves = nw.ALL_SLAVES
         for name in backends:
+            if name == "dxva2":
+                scan(name, 0x6E)          # 系统接口地址写死 0x6E, 不用每个地址扫一遍
+                continue
             for slave in slaves:
                 if name == "gpu":
                     scan(name, slave, fallback_scan=False)
@@ -180,7 +190,10 @@ class Api:
             errors.append("快扫无目标, 放开 line 盲扫重试 gpu")
             for slave in slaves:
                 scan("gpu", slave, fallback_scan=True)
-        targets.sort(key=lambda t: (0 if t["recommended"] else 1, t["backend"], t["address"], t["mon_id"]))
+        # 系统 DDC/CI 排最后: 同时扫到南微机和普通显示器时, 默认连南微机
+        order = {"rawusb": 0, "gpu": 1, "dxva2": 2}
+        targets.sort(key=lambda t: (0 if t["recommended"] else 1, order.get(t["backend"], 9),
+                                    t["address"], t["mon_id"]))
         return {"ok": True, "targets": targets, "errors": errors}
 
     def connect_target(self, target):
@@ -359,7 +372,8 @@ class Api:
         info = nw.model_info(self._model)
         return {"ok": True,
                 "model": self._model,
-                "features": {"macros": info["macros"], "hold": info["hold"]},
+                "features": {"macros": info["macros"], "hold": info["hold"],
+                             "keys": info["keys"], "choices": info["choices"]},
                 "colortemp": cls.COLORTEMP,
                 "gamma": cls.GAMMA,
                 "ops": {"brightness": nw.OP_BRIGHTNESS, "contrast": nw.OP_CONTRAST,

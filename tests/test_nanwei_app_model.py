@@ -91,7 +91,7 @@ def test_connecting_a_target_switches_to_its_model(api):
 def test_select_216_meta_then_connect_216_target(api):
     meta = api.select_model("216")
     assert meta["ok"] and meta["model"] == "216"
-    assert meta["features"] == {"macros": False, "hold": True}
+    assert meta["features"] == {"macros": False, "hold": True, "keys": True, "choices": True}
     assert [o["value"] for o in meta["colortemp"]] == [o["value"] for o in nw.COLORTEMP_VALUES_216]
     targets = [t for t in api.discover_targets()["targets"] if t["model"] == "216"]
     r = api.connect_target(targets[0])
@@ -126,3 +126,40 @@ def test_shutdown_releases_held_keys_on_216(api):
     be = api._be
     api.shutdown()
     assert be.raw[-1] == [0xC0, 0x96, 0xFF, 0x00]
+
+
+# ---- 标准显示器 (戴尔等): 走 Windows 系统 DDC/CI, 只控亮度/对比度 ----
+def test_scan_includes_system_ddcci_as_standard_monitor(api):
+    """笔记本核显 + 没插小板时, 系统 DDC/CI 是唯一能扫到显示器的路 (2026-10-12 用户: 以前能扫到戴尔)。"""
+    targets = api.discover_targets()["targets"]
+    sys_t = [t for t in targets if t["backend"] == "dxva2"]
+    assert [(t["address"], t["model"]) for t in sys_t] == [("0x6E", "std")]
+    assert targets[-1]["backend"] == "dxva2"        # 同时扫到南微机时默认连南微机
+
+
+def test_system_ddcci_never_tagged_as_216(api):
+    """系统接口发不了 0xC0 帧; 认不出的 0x6E 显示器不能落到 216 (会给戴尔发 216 自定义命令)。"""
+    targets = api.discover_targets()["targets"]
+    assert all(t["model"] == "std" for t in targets if t["backend"] == "dxva2")
+
+
+def test_connect_standard_monitor_only_brightness_contrast(api):
+    t = next(t for t in api.discover_targets()["targets"] if t["backend"] == "dxva2")
+    r = api.connect_target(t)
+    assert r["ok"] and r["model"] == "std"
+    assert r["meta"]["features"] == {"macros": False, "hold": False, "keys": False, "choices": False}
+    assert r["versions"] == {"hw": None, "sw": None}
+    assert isinstance(api._dev, nw.MonitorStd)
+    assert api.get_param(nw.OP_BRIGHTNESS)["ok"] is True
+    for res in (api.press_key("menu"), api.press_key_raw(4), api.get_choice("gamma"),
+                api.set_choice("colortemp", 5), api.enter_factory(), api.hold_key("menu", 1)):
+        assert res["ok"] is False
+    assert api._be.raw == []                        # 一条自定义帧都没发出去
+
+
+def test_unsupported_error_has_no_usb_hint():
+    """NotImplementedError 是 RuntimeError 子类, 以前被误报成"检查 USB 小板"。"""
+    r = app_nanwei._err(NotImplementedError("标准显示器只支持亮度 / 对比度"), "dxva2")
+    assert r["hint"] is None
+    assert "USB" in app_nanwei._err(RuntimeError("x"), "rawusb")["hint"]
+    assert "DDC/CI" in app_nanwei._err(RuntimeError("x"), "dxva2")["hint"]

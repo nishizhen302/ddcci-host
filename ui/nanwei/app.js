@@ -31,16 +31,22 @@ const DEMO_META_216 = {
   gamma: Array.from({ length: 7 }, (_, i) => ({ label: `γ${i + 1}`, value: i + 1 })),
   ops: { brightness: 0x10, contrast: 0x12, colortemp: 0x14, gamma: 0x72 },
 };
+const DEMO_META_STD = {
+  ok: true, model: "std", features: { macros: false, hold: false, keys: false, choices: false },
+  colortemp: [], gamma: [],
+  ops: { brightness: 0x10, contrast: 0x12, colortemp: 0x14, gamma: 0x72 },
+};
 const KEY_CODE = { menu: 0x01, left: 0x02, right: 0x03, exit: 0x05, ok: 0x04 };
 const demoBridge = {
   _model: "156",
   _v: { 0x10: [64, 100], 0x12: [72, 100], 0x14: [0x06, 0x0d], 0x72: [0x08, 0x0c] },
   async _lag(a, b) { await sleep((a || 70) + Math.random() * ((b || 150) - (a || 70))); },
-  _meta() { return this._model === "216" ? DEMO_META_216 : DEMO_META; },
+  _meta() { return this._model === "216" ? DEMO_META_216 : this._model === "std" ? DEMO_META_STD : DEMO_META; },
   async models() {
     return { ok: true, current: this._model, models: [
       { id: "156", label: "156pin", title: "156pin 机型", desc: "南微协议 · 地址 0x5E", slaves: ["0x5E", "0x6E"], macros: true, hold: false },
       { id: "216", label: "216pin", title: "216pin 机型", desc: "标准 DDC/CI · 地址 0x6E", slaves: ["0x6E"], macros: false, hold: true },
+      { id: "std", label: "标准显示器", title: "标准显示器", desc: "系统 DDC/CI · 只控亮度/对比度", slaves: ["0x6E"], macros: false, hold: false },
     ] };
   },
   async discover_targets() {
@@ -48,6 +54,7 @@ const demoBridge = {
     return { ok: true, errors: [], targets: [
       { id: "rawusb:0x5E:0", backend: "rawusb", address: "0x5E", mon_id: 0, model: "156", description: "JRD UC1190_DVI", recommended: true },
       { id: "gpu:0x6E:1", backend: "gpu", address: "0x6E", mon_id: 1, model: "216", description: "RTK 216pin 样机", recommended: false },
+      { id: "dxva2:0x6E:2", backend: "dxva2", address: "0x6E", mon_id: 2, model: "std", description: "DELL U2724D", recommended: false },
     ] };
   },
   async connect_target(t) {
@@ -56,7 +63,7 @@ const demoBridge = {
     if (this._model === "216") { this._v[0x14] = [0x05, 0x0b]; this._v[0x72] = [3, 7]; }
     else { this._v[0x14] = [0x06, 0x0d]; this._v[0x72] = [0x08, 0x0c]; }
     return { ok: true, backend: t.backend, address: t.address, mon_id: t.mon_id, description: t.description,
-      versions: this._model === "216" ? { hw: null, sw: 1 } : { hw: 101, sw: 101 }, model: this._model, meta: this._meta() };
+      versions: this._model === "216" ? { hw: null, sw: 1 } : this._model === "std" ? { hw: null, sw: null } : { hw: 101, sw: 101 }, model: this._model, meta: this._meta() };
   },
   async protocol_meta() { return this._meta(); },
   async get_param(op) {
@@ -90,8 +97,12 @@ const demoBridge = {
   async check_update() { return { ok: true, current: "42", has_update: false, behind_by: 0, error: null }; },
   async open_repo() { return { ok: true }; },
 };
-const bridgeReady = () => !!(window.pywebview && window.pywebview.api);
-const bridge = () => (bridgeReady() ? window.pywebview.api : demoBridge);
+// Qt 版 (Win7, pywebview 5.4): api 对象比 QWebChannel 先出现。通道没建好就调用, pywebview 只等 100ms
+// 重试一次, 还没好那次调用就永远不返回 —— 启动扫描卡死在"正在查找…" (2026-10-12 实遇)。
+// 所以 Qt 下必须等 _QWebChannel 到位才算就绪。
+const bridgeReady = () => !!(window.pywebview && window.pywebview.api) &&
+  (window.pywebview.platform !== "qtwebengine" || !!window.pywebview._QWebChannel);
+const bridge = () => (window.pywebview && window.pywebview.api ? window.pywebview.api : demoBridge);
 const app = $("#app");
 
 // ---------------------------------------------------------------- 状态
@@ -137,7 +148,7 @@ const gammaOf = (i) => GAMMAS[clamp(i, 0, 6)] || 2.2;
 function renderPicture() {
   const b = VAL.brightness / (MAX.brightness || 100), c = VAL.contrast / (MAX.contrast || 100);
   $("#pic").style.filter = `url(#gammaF) brightness(${(0.32 + 0.85 * b).toFixed(3)}) contrast(${(0.55 + 0.9 * c).toFixed(3)})`;
-  const ex = (gammaOf(VAL.gIndex) / 2.2).toFixed(3);
+  const ex = (META && !META.gamma.length ? 1 : gammaOf(VAL.gIndex) / 2.2).toFixed(3);   // 没有 Gamma 的机型画面不弯曲线
   ["gR", "gG", "gB"].forEach((id) => document.getElementById(id).setAttribute("exponent", ex));
   const ct = META && META.colortemp[VAL.ctIndex];
   const tint = tintFor(ct && ct.label);
@@ -463,7 +474,7 @@ function keyVisual(name) {
 }
 let macroBusy = false;
 function pressKey(name) {
-  if (app.dataset.link !== "ok" || macroBusy || holding) return;
+  if (app.dataset.link !== "ok" || macroBusy || holding || !hasFeature("keys")) return;
   keyVisual(name);
   io(`按键 ${KEY_LBL[name]}`, () => bridge().press_key(name), { islandHtml: `<span class="is-key">${KEY_LBL[name]}</span>已发送` });
 }
@@ -607,9 +618,12 @@ $("#log-copy").addEventListener("click", () => {
 // 机型不用手选: 扫描时后端按应答识别, 每个目标带 model; 连上哪台, connect_target 就回传
 // 那台的界面参数 (result.meta), 这里一次切完 —— 156pin 显示工厂/老化宏, 216pin 显示长按。
 const modelLabel = (id) => { const m = MODELS.find((x) => x.id === id); return m ? m.label : id ? id + "pin" : "--"; };
+// 功能开关缺省视为有 (老后端的 meta 没有 keys/choices 字段); 标准显示器两个都关, 只剩亮度/对比度。
+const hasFeature = (f) => !META || !META.features || META.features[f] !== false;
 function applyModel(meta) {
   META = meta;
   $$("[data-model]").forEach((el) => { el.hidden = el.dataset.model !== meta.model; });
+  $$("[data-feature]").forEach((el) => { el.hidden = !hasFeature(el.dataset.feature); });
   VAL.ctIndex = clamp(VAL.ctIndex, 0, meta.colortemp.length - 1);
   VAL.gIndex = clamp(VAL.gIndex, 0, meta.gamma.length - 1);
   $("#ct-val").textContent = "--";
@@ -717,6 +731,7 @@ async function selectTarget(id) {
   app.classList.add("screen-on");
   await readParam("brightness");
   await readParam("contrast");
+  if (!hasFeature("choices")) return;
   await readDiscrete("colortemp");
   await readDiscrete("gamma");
 }
@@ -789,7 +804,14 @@ requestAnimationFrame(() => setTimeout(() => {
   islandIdle();
   if (bridgeReady()) connectBackend();
   else {
-    window.addEventListener("pywebviewready", connectBackend);
-    setTimeout(() => { if (!bridgeReady()) connectBackend(); }, location.protocol === "file:" ? 500 : 2500);
+    // 事件 + 轮询双保险 (事件可能早于监听就发过了); 只有压根不在 pywebview 里 (浏览器直接打开) 才走演示数据,
+    // 慢机器上 pywebview 迟迟没就绪也继续等, 不能掉进演示数据冒充真显示器。
+    window.addEventListener("pywebviewready", () => { if (bridgeReady()) connectBackend(); });
+    const t0 = Date.now(), demoAfter = location.protocol === "file:" ? 500 : 2500;
+    const poll = setInterval(() => {
+      if (BOOTED) { clearInterval(poll); return; }
+      if (bridgeReady()) { clearInterval(poll); connectBackend(); }
+      else if (!window.pywebview && Date.now() - t0 > demoAfter) { clearInterval(poll); connectBackend(); }
+    }, 150);
   }
 }, 120));

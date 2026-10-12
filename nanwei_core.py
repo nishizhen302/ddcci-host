@@ -257,12 +257,38 @@ def detect_model(backend, mon_id):
     return "216"
 
 
+class MonitorStd(NanweiMonitor):
+    """标准显示器 (戴尔等, 经 Windows 系统 DDC/CI 接口扫到): 只有亮度 / 对比度两个标准 VCP。
+
+    不发 0xC0 自定义帧, 也不读南微的版本码 —— 别人家的显示器不认这些。
+    """
+
+    model = "std"
+    COLORTEMP = []
+    GAMMA = []
+
+    def versions(self):
+        return {"hw": None, "sw": None}
+
+    def _unsupported(self, *a, **kw):
+        raise NotImplementedError("标准显示器只支持亮度 / 对比度")
+
+    press_key = press_key_value = press_keys = enter_factory = start_aging = _unsupported
+    set_choice = get_choice = _unsupported
+
+
 # ---- 机型表 ----
+# keys = OSD 模拟按键, choices = 色温/Gamma 两块方块; 前端按这两个开关显隐。
 MODELS = [
     {"id": "156", "label": "156pin", "title": "156pin 机型",
-     "desc": "南微协议 · 地址 0x5E", "slaves": [0x5E, 0x6E], "macros": True, "hold": False},
+     "desc": "南微协议 · 地址 0x5E", "slaves": [0x5E, 0x6E], "macros": True, "hold": False,
+     "keys": True, "choices": True},
     {"id": "216", "label": "216pin", "title": "216pin 机型",
-     "desc": "标准 DDC/CI · 地址 0x6E", "slaves": [0x6E], "macros": False, "hold": True},
+     "desc": "标准 DDC/CI · 地址 0x6E", "slaves": [0x6E], "macros": False, "hold": True,
+     "keys": True, "choices": True},
+    {"id": "std", "label": "标准显示器", "title": "标准显示器",
+     "desc": "系统 DDC/CI · 只控亮度/对比度", "slaves": [0x6E], "macros": False, "hold": False,
+     "keys": False, "choices": False},
 ]
 MODEL_IDS = [m["id"] for m in MODELS]
 ALL_SLAVES = sorted({a for m in MODELS for a in m["slaves"]})     # 扫描时两种机型的地址都扫
@@ -278,5 +304,5 @@ def model_info(model_id):
 
 def make_monitor(model_id, backend, mon_id=0):
     model_info(model_id)               # 未知机型直接报错
-    cls = Monitor216 if str(model_id) == "216" else NanweiMonitor
+    cls = {"216": Monitor216, "std": MonitorStd}.get(str(model_id), NanweiMonitor)
     return cls(backend, mon_id)
