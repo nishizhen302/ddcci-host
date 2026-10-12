@@ -272,3 +272,27 @@ def test_detect_156_sample_on_0x6e():
 def test_detect_falls_back_to_colortemp_then_216():
     assert nw.detect_model(_AddrBe(0x6E, {nw.OP_COLORTEMP: [0x05, 0x0B]}), 0) == "216"
     assert nw.detect_model(_AddrBe(0x6E, {}), 0) == "216"
+
+
+def test_216_keypad_has_the_seven_panel_keys():
+    """216pin 面板 7 键 = ADC 表里的消息号 0/1/2/3/6/8/9 (docs/protocol-216pin.md 第 5 节)。"""
+    assert [k["msg"] for k in nw.KEYPAD_216] == [0, 1, 2, 3, 6, 8, 9]
+    assert [k["label"] for k in nw.KEYPAD_216] == [str(i) for i in range(1, 8)]
+    for k in nw.KEYPAD_216:                      # 别名和旧键名必须指向同一个消息号
+        if k["alias"]:
+            assert nw.HOLD_KEYS_216[k["alias"]] == k["msg"]
+
+
+def test_216_tap_and_hold_hit_the_same_key():
+    """点按 (mode 00) 固件会把 1/2 互换, 所以点按发换回来的值; 按住 (mode 01) 直接发消息号。"""
+    for k in nw.KEYPAD_216:
+        be = FakeBackend()
+        dev = nw.Monitor216(be, 0)
+        dev.press_key(k["id"])
+        dev.hold_key(k["id"], 1, sleep=lambda s: None)
+        tap = {1: 2, 2: 1}.get(k["msg"], k["msg"])
+        assert be.raw == [[0xC0, 0x96, tap, 0x00], [0xC0, 0x96, k["msg"], 0x01], [0xC0, 0x96, 0xFF, 0x00]]
+
+
+def test_156_has_no_keypad_table():
+    assert nw.NanweiMonitor.KEYPAD is None and nw.MonitorStd.KEYPAD is None

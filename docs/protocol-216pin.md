@@ -116,6 +116,10 @@ gamma 写 `C0 91`、读 GET 0x72 减 1；版本只读 0xC9；隐藏 156pin 的�
 （选键 + 秒数，按住时 RIGHT/LEFT 用互换后的编号 2/1，保证和点按是同一个键；结束必发 `C0 96 FF 00`，
 关窗时也补发一次）。代码：`nanwei_core.Monitor216`、`app_nanwei.Api.select_model/hold_key`、`ui/nanwei/app.js` 机型选择段。
 
+**面板 7 键（2026-10-12）**：OSD 按键区按 `nanwei_core.KEYPAD_216` 渲染 7 个键，编号 1~7 = 消息号 0/1/2/3/6/8/9，
+点按发 mode 00（1/2 互换后的值），长按发 mode 01（直接发消息号）。只有 1=MENU、4=EXIT 能确定，
+其余功能待实机逐个按一下确认后改表里的 `label`/`hint`。界面不显示 156pin/216pin 字样。
+
 原始改造清单：
 
 1. 地址切到 0x6E（GUI 里已经有 0x5E/0x6E 切换）。

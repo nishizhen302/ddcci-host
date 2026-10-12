@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""无边框窗口 chrome —— WS_THICKFRAME + NCCALCSIZE 铺满 + NCHITTEST 缩放 + DWM 圆角。
+"""无边框窗口 chrome —— WS_THICKFRAME + NCCALCSIZE 铺满 + NCHITTEST 缩放 + 圆角
+(Win11 用 DWM 原生圆角; Win7/10 没有, 用 SetWindowRgn 裁)。
 
 pywebview 各入口 (app.py = pinmux/phytune, app_nanwei.py = DDCCI 控制台) 共用这套
 窗口装饰逻辑。抽成独立模块的目的: 让 app_nanwei 不必 `import app` —— 后者会连带
@@ -19,6 +20,21 @@ _RESIZE_BORDER = 8       # 边缘缩放命中区厚度 (逻辑像素, 按 DPI �
 WM_APP_RESIZE = 0x8001   # 自定义消息: 前端请求边缘缩放 (wParam=HT 码), 在 GUI 线程处理
 # Qt 后端 (Win7 版, DDCCI_GUI=qt) 走轻量路径: 不改边框, 只保留缩放/移动和圆角 (见 style_native_window)
 _QT_LIGHT = os.environ.get("DDCCI_GUI") == "qt"
+_CORNER_RADIUS = 8       # 窗口圆角半径 (逻辑像素), 与 Win11 DWM 原生圆角 (DWMWCP_ROUND) 一致
+_RGN_CORNERS = False     # True = 用 SetWindowRgn 自己裁圆角 (Win7/10 没有 DWM 原生圆角)
+_RGN_LAST = None         # 上次裁剪时的 (宽, 高, 最大化), 尺寸没变就不重复裁
+
+
+def _use_region_corners():
+    """Win11 (build >= 22000) 有 DWM 原生圆角, 抗锯齿带阴影; Win7/10 没有, 只能裁窗口区域。
+    DDCCI_ROUND_RGN=1 在 Win11 上也强制走裁剪 (本机验证 Win7/10 效果用), =0 强制不裁。"""
+    force = os.environ.get("DDCCI_ROUND_RGN")
+    if force:
+        return force != "0"
+    try:
+        return sys.getwindowsversion().build < 22000
+    except Exception:
+        return False
 
 
 def _find_own_window():
@@ -88,25 +104,100 @@ def _hittest(hwnd, lparam):
     return None
 
 
+# 命中码 -> 系统缩放指针 (IDC_SIZEWE=32644 / SIZENS=32645 / SIZENWSE=32642 / SIZENESW=32643)
+_SIZE_CURSORS = {10: 32644, 11: 32644, 12: 32645, 15: 32645,
+                 13: 32642, 17: 32642, 14: 32643, 16: 32643}
+
+
+
+def _set_size_cursor(idc):
+    import ctypes
+    user32 = ctypes.windll.user32
+    user32.LoadCursorW.restype = ctypes.c_void_p
+    user32.LoadCursorW.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    user32.SetCursor.argtypes = [ctypes.c_void_p]
+    user32.SetCursor(user32.LoadCursorW(None, ctypes.c_void_p(idc)))
+
+
+_CURSOR_TIMER_ID = 0x5A17     # 私有定时器号, 别和 Qt 自己的定时器撞
+_CURSOR_TICKS = 0             # 还要补设几次
+_CURSOR_PERIOD_MS = 60
+
+
+def _arm_cursor_timer(hwnd):
+    """鼠标进边缘后约 0.25s 内每 60ms 补设一次双箭头 (盖住渲染进程晚到的指针更新)。"""
+    global _CURSOR_TICKS
+    import ctypes
+    _CURSOR_TICKS = 4
+    ctypes.windll.user32.SetTimer(hwnd, _CURSOR_TIMER_ID, _CURSOR_PERIOD_MS, None)
+
+
+def _cursor_timer_tick(hwnd):
+    global _CURSOR_TICKS
+    import ctypes
+    from ctypes import wintypes
+    user32 = ctypes.windll.user32
+    _CURSOR_TICKS -= 1
+    if _CURSOR_TICKS <= 0 or _RZ is not None:
+        user32.KillTimer(hwnd, _CURSOR_TIMER_ID)
+    pt = wintypes.POINT()
+    user32.GetCursorPos(ctypes.byref(pt))
+    if user32.WindowFromPoint(pt) != hwnd:          # 鼠标已经离开这个窗口
+        return
+    ht = _hittest(hwnd, ((pt.y & 0xFFFF) << 16) | (pt.x & 0xFFFF))
+    if ht in _SIZE_CURSORS:
+        _set_size_cursor(_SIZE_CURSORS[ht])
+
+
 _RZ = None   # Qt 轻量路径的手动缩放状态: (ht, 起点光标x, y, 起始 left, top, right, bottom, 最小宽, 最小高)
+
+
+def _window_dpi(hwnd):
+    import ctypes
+    try:
+        return ctypes.windll.user32.GetDpiForWindow(hwnd) or 96
+    except Exception:                       # Win7 没有 GetDpiForWindow
+        dc = ctypes.windll.user32.GetDC(0)
+        dpi = ctypes.windll.gdi32.GetDeviceCaps(dc, 88) or 96
+        ctypes.windll.user32.ReleaseDC(0, dc)
+        return dpi
 
 
 def _min_size_px(hwnd):
     """窗口最小尺寸 (物理像素) = pywebview 的 min_size (逻辑像素) × DPI 缩放。"""
-    import ctypes
     lw, lh = 640, 400
     try:
         import webview
         lw, lh = webview.windows[0].min_size
     except Exception:
         pass
-    try:
-        dpi = ctypes.windll.user32.GetDpiForWindow(hwnd) or 96
-    except Exception:                       # Win7 没有 GetDpiForWindow
-        dc = ctypes.windll.user32.GetDC(0)
-        dpi = ctypes.windll.gdi32.GetDeviceCaps(dc, 88) or 96
-        ctypes.windll.user32.ReleaseDC(0, dc)
+    dpi = _window_dpi(hwnd)
     return int(lw * dpi / 96), int(lh * dpi / 96)
+
+
+def _apply_round_region(hwnd):
+    """Win7/10: 把窗口区域裁成圆角矩形 (硬边, 无抗锯齿)。最大化时恢复直角铺满。
+    每次 WM_SIZE 后调; 尺寸和最大化状态都没变就跳过。"""
+    global _RGN_LAST
+    import ctypes
+    from ctypes import wintypes
+    user32, gdi32 = ctypes.windll.user32, ctypes.windll.gdi32
+    user32.SetWindowRgn.argtypes = [wintypes.HWND, ctypes.c_void_p, wintypes.BOOL]
+    gdi32.CreateRoundRectRgn.restype = ctypes.c_void_p
+    gdi32.DeleteObject.argtypes = [ctypes.c_void_p]
+    r = wintypes.RECT()
+    user32.GetWindowRect(hwnd, ctypes.byref(r))
+    w, h, zoomed = r.right - r.left, r.bottom - r.top, bool(user32.IsZoomed(hwnd))
+    if (w, h, zoomed) == _RGN_LAST:
+        return
+    _RGN_LAST = (w, h, zoomed)
+    if zoomed:
+        user32.SetWindowRgn(hwnd, None, True)      # 最大化贴满屏幕边, 不要圆角
+        return
+    d = 2 * max(1, round(_CORNER_RADIUS * _window_dpi(hwnd) / 96))
+    rgn = gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d)   # 右/下边界不含, 故 +1
+    if rgn and not user32.SetWindowRgn(hwnd, rgn, True):
+        gdi32.DeleteObject(rgn)                    # 成功后区域归系统所有, 失败才自己删
 
 
 def _manual_resize(hwnd, msg):
@@ -151,7 +242,15 @@ def _wndproc(hwnd, msg, wparam, lparam):
     WM_NCCALCSIZE = 0x0083
     WM_NCHITTEST = 0x0084
     WM_NCLBUTTONDOWN = 0x00A1
+    WM_SIZE = 0x0005
+    WM_SETCURSOR = 0x0020
+    WM_NCMOUSEMOVE = 0x00A0
+    WM_TIMER = 0x0113
     try:
+        if msg == WM_SIZE and _RGN_CORNERS:
+            res = ctypes.windll.user32.CallWindowProcW(_OLD_WNDPROC, hwnd, msg, wparam, lparam)
+            _apply_round_region(hwnd)
+            return res
         if msg == WM_NCCALCSIZE and wparam and not _QT_LIGHT:
             return 0  # 客户区 = 整个窗口, 无非客户边框 (去掉那圈白框)
         if msg == WM_NCHITTEST:
@@ -160,6 +259,21 @@ def _wndproc(hwnd, msg, wparam, lparam):
                 return ht
             # 不在边缘 → 落到原过程返回 HTCLIENT, 拖拽交给 pywebview-drag-region
         if _QT_LIGHT:
+            # Qt 不认非客户区命中码, 会把指针设回自己的箭头 (WM_SETCURSOR 里设, 随后的 WM_NCMOUSEMOVE
+            # 里还会再设一次) -> 边缘看不到缩放双箭头 (2026-10-12 用户反馈)。两处都按命中码补系统双箭头;
+            # 网页渲染进程还会异步晚到一次"设箭头/小手", 偶尔盖掉双箭头 -> 再用定时器补设几次。
+            if msg == WM_SETCURSOR and (lparam & 0xFFFF) in _SIZE_CURSORS:
+                _set_size_cursor(_SIZE_CURSORS[lparam & 0xFFFF])
+                _arm_cursor_timer(hwnd)
+                return 1
+            if msg == WM_NCMOUSEMOVE and int(wparam) in _SIZE_CURSORS:
+                res = ctypes.windll.user32.CallWindowProcW(_OLD_WNDPROC, hwnd, msg, wparam, lparam)
+                _set_size_cursor(_SIZE_CURSORS[int(wparam)])
+                _arm_cursor_timer(hwnd)
+                return res
+            if msg == WM_TIMER and int(wparam) == _CURSOR_TIMER_ID:
+                _cursor_timer_tick(hwnd)
+                return 0
             if _manual_resize(hwnd, msg):
                 return 0
             if msg == WM_NCLBUTTONDOWN and 10 <= int(wparam) <= 17:
@@ -223,9 +337,10 @@ def _set_dwm_corners(hwnd, dwm):
 
     # DWM 原生圆角 (DWMWCP_ROUND): 干净、抗锯齿、带正常阴影, 无白边/无脚。
     # 半径由系统定 (中等, 用户认可的大小); 配合 NCCALCSIZE 铺满后, 圆角内直接是深色画布。
+    # 走区域裁剪时 (Win7/10, 或调试强制) 关掉 DWM 圆角, 免得 Win11 上两种叠在一起看不出裁剪效果。
     DWMWA_WINDOW_CORNER_PREFERENCE = 33
-    DWMWCP_ROUND = 2
-    pref = ctypes.c_int(DWMWCP_ROUND)
+    DWMWCP_DONOTROUND, DWMWCP_ROUND = 1, 2
+    pref = ctypes.c_int(DWMWCP_DONOTROUND if _RGN_CORNERS else DWMWCP_ROUND)
     dwm.DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE,
                               ctypes.byref(pref), ctypes.sizeof(pref))
 
@@ -233,12 +348,14 @@ def _set_dwm_corners(hwnd, dwm):
 def style_native_window():
     """无边框窗口收尾: 去掉 WS_THICKFRAME (消除白框+方阴影), 改用 NCHITTEST 子类化做边缘缩放,
     再叠大圆角区域。在 GUI 起来后由 webview.start(func=...) 回调里跑; 仅 Windows 生效, 失败静默。"""
-    global _HWND
+    global _HWND, _RGN_CORNERS
     if not sys.platform.startswith("win"):
         return
     try:
         import ctypes
         import time
+
+        _RGN_CORNERS = _use_region_corners()
 
         user32 = ctypes.windll.user32
         dwm = ctypes.windll.dwmapi
@@ -262,6 +379,8 @@ def style_native_window():
             # 子类化保留边缘缩放命中和 WM_APP_RESIZE (系统原生缩放/移动循环), 再加圆角即可。
             _install_subclass(hwnd)
             _set_dwm_corners(hwnd, dwm)
+            if _RGN_CORNERS:
+                _apply_round_region(hwnd)
             return
 
         # WS_THICKFRAME: 让窗口可缩放 + Aero Snap (无标题栏)
@@ -291,5 +410,7 @@ def style_native_window():
         user32.SetWindowPos(hwnd, 0, 0, 0, _w, _h, SWP_SIZE)
 
         _set_dwm_corners(hwnd, dwm)
+        if _RGN_CORNERS:
+            _apply_round_region(hwnd)
     except Exception:
         pass  # 样式优化失败不影响主功能

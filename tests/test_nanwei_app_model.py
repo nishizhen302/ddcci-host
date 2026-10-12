@@ -163,3 +163,18 @@ def test_unsupported_error_has_no_usb_hint():
     assert r["hint"] is None
     assert "USB" in app_nanwei._err(RuntimeError("x"), "rawusb")["hint"]
     assert "DDC/CI" in app_nanwei._err(RuntimeError("x"), "dxva2")["hint"]
+
+
+def test_216_meta_carries_keypad_and_key5_sends_c0_frame(api):
+    r = _connect_216(api)
+    assert [k["id"] for k in r["meta"]["keypad"]] == ["k1", "k2", "k3", "k4", "k5", "k6", "k7"]
+    res = api.press_key("k5")
+    assert res["ok"] and res["tx"].startswith("6E 51 84 C0 96 06 00")
+    assert api.press_key("k9")["ok"] is False          # 不存在的键
+    assert api.hold_key("k7", 0.2)["ok"] is True
+
+
+def test_156_meta_has_no_keypad(api):
+    t = next(t for t in api.discover_targets()["targets"] if t["model"] == "156")
+    assert api.connect_target(t)["meta"]["keypad"] is None
+    assert api.press_key("k5")["ok"] is False          # 156pin 只有 4 键

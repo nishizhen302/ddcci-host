@@ -29,6 +29,8 @@ const DEMO_META_216 = {
     { label: "5000K", value: 0x04 }, { label: "sRGB", value: 0x01 }, { label: "User", value: 0x0b },
   ],
   gamma: Array.from({ length: 7 }, (_, i) => ({ label: `γ${i + 1}`, value: i + 1 })),
+  keypad: [["MENU", "menu"], ["左?", "left"], ["右?", "right"], ["EXIT", "exit"], ["?"], ["?"], ["?"]]
+    .map(([hint, alias], i) => ({ id: `k${i + 1}`, label: String(i + 1), hint, alias: alias || null })),
   ops: { brightness: 0x10, contrast: 0x12, colortemp: 0x14, gamma: 0x72 },
 };
 const DEMO_META_STD = {
@@ -53,7 +55,7 @@ const demoBridge = {
     await sleep(900);
     return { ok: true, errors: [], targets: [
       { id: "rawusb:0x5E:0", backend: "rawusb", address: "0x5E", mon_id: 0, model: "156", description: "JRD UC1190_DVI", recommended: true },
-      { id: "gpu:0x6E:1", backend: "gpu", address: "0x6E", mon_id: 1, model: "216", description: "RTK 216pin 样机", recommended: false },
+      { id: "gpu:0x6E:1", backend: "gpu", address: "0x6E", mon_id: 1, model: "216", description: "JRD EC2272-DP", recommended: false },
       { id: "dxva2:0x6E:2", backend: "dxva2", address: "0x6E", mon_id: 2, model: "std", description: "DELL U2724D", recommended: false },
     ] };
   },
@@ -156,7 +158,7 @@ function renderPicture() {
   $("#veil").style.setProperty("--amb-tint", tint);
   // 氛围光一直在 (没连上也保持那层紫蓝), 连上后才跟着亮度变
   const ab = app.dataset.link === "ok" ? b : 0.64;
-  $("#amb").style.filter = `blur(70px) saturate(1.5) brightness(${(0.55 + 0.6 * ab).toFixed(3)})`;
+  $("#amb").style.filter = `brightness(${(0.55 + 0.6 * ab).toFixed(3)})`;   // 模糊已烘焙进 wall-amb.png
 }
 
 // ---------------------------------------------------------------- 灵动岛
@@ -466,8 +468,22 @@ scrim.addEventListener("click", closeExpand);
 
 // ---------------------------------------------------------------- OSD 按键
 const KEY_LBL = { menu: "MENU", left: "LEFT", right: "RIGHT", exit: "EXIT", ok: "OK" };
+// 216pin 有 7 键 (META.keypad): 快捷键/旧键名 (menu/left/...) 按 alias 换成 k1~k4
+const padKey = (name) => (META && META.keypad || []).find((k) => k.id === name || k.alias === name);
+const keyId = (name) => { const k = padKey(name); return k ? k.id : name; };
+const keyName = (name) => { const k = padKey(name); return k ? "键 " + k.label : KEY_LBL[name] || name; };
+function renderKeypad(meta) {
+  const pad = meta.keypad;
+  if (!pad) return;
+  const tip = (k) => k.hint && k.hint !== "?" ? " · " + k.hint : "";
+  $("#keys-216").innerHTML = pad.map((k) =>
+    `<button class="key" data-key="${esc(k.id)}" type="button" title="键 ${esc(k.label)}${esc(tip(k))}">` +
+    `<span class="kc"><b class="kn">${esc(k.label)}</b></span><span class="kl">${esc(k.hint)}</span></button>`).join("");
+  $$("#keys-216 .key").forEach((b) => b.addEventListener("click", () => pressKey(b.dataset.key)));
+  $("#hold-key").innerHTML = pad.map((k) => `<option value="${esc(k.id)}">键 ${esc(k.label)}${esc(tip(k))}</option>`).join("");
+}
 function keyVisual(name) {
-  const k = $(`.keys .key[data-key="${name}"]`);
+  const k = $$(`.keys .key[data-key="${name}"]`).find((el) => !el.closest("[hidden]"));
   if (!k) return;                                              // OK 键没有实体按钮, 只走灵动岛
   k.classList.remove("hit"); void k.offsetWidth; k.classList.add("hit");
   setTimeout(() => k.classList.remove("hit"), 200);
@@ -475,8 +491,9 @@ function keyVisual(name) {
 let macroBusy = false;
 function pressKey(name) {
   if (app.dataset.link !== "ok" || macroBusy || holding || !hasFeature("keys")) return;
+  name = keyId(name);
   keyVisual(name);
-  io(`按键 ${KEY_LBL[name]}`, () => bridge().press_key(name), { islandHtml: `<span class="is-key">${KEY_LBL[name]}</span>已发送` });
+  io(`按键 ${keyName(name)}`, () => bridge().press_key(name), { islandHtml: `<span class="is-key">${esc(keyName(name))}</span>已发送` });
 }
 $$(".keys .key").forEach((k) => k.addEventListener("click", () => pressKey(k.dataset.key)));
 
@@ -512,14 +529,14 @@ $("#hold-send").addEventListener("click", async () => {
     const el = (Date.now() - t0) / 1000, left = Math.max(0, sec - el);
     btn.textContent = left.toFixed(1) + "s";
     tile.style.setProperty("--prog", Math.min(100, el / sec * 100).toFixed(1) + "%");
-    island(`<span class="is-key">${KEY_LBL[name]}</span>按住中<span class="is-sub">${left.toFixed(1)}s</span>`);
+    island(`<span class="is-key">${esc(keyName(name))}</span>按住中<span class="is-sub">${left.toFixed(1)}s</span>`);
   };
   tick();
   const timer = setInterval(tick, 100);
   try {
-    await io(`长按 ${KEY_LBL[name]}`, () => bridge().hold_key(name, sec), {
+    await io(`长按 ${esc(keyName(name))}`, () => bridge().hold_key(name, sec), {
       note: (x) => `${x.seconds}s 已松开`,
-      islandHtml: `<span class="is-key">${KEY_LBL[name]}</span>已松开<span class="is-sub">${sec}s</span>`,
+      islandHtml: `<span class="is-key">${esc(keyName(name))}</span>已松开<span class="is-sub">${sec}s</span>`,
     });
   } finally {
     clearInterval(timer);
@@ -617,13 +634,13 @@ $("#log-copy").addEventListener("click", () => {
 // ---------------------------------------------------------------- 机型
 // 机型不用手选: 扫描时后端按应答识别, 每个目标带 model; 连上哪台, connect_target 就回传
 // 那台的界面参数 (result.meta), 这里一次切完 —— 156pin 显示工厂/老化宏, 216pin 显示长按。
-const modelLabel = (id) => { const m = MODELS.find((x) => x.id === id); return m ? m.label : id ? id + "pin" : "--"; };
 // 功能开关缺省视为有 (老后端的 meta 没有 keys/choices 字段); 标准显示器两个都关, 只剩亮度/对比度。
 const hasFeature = (f) => !META || !META.features || META.features[f] !== false;
 function applyModel(meta) {
   META = meta;
   $$("[data-model]").forEach((el) => { el.hidden = el.dataset.model !== meta.model; });
   $$("[data-feature]").forEach((el) => { el.hidden = !hasFeature(el.dataset.feature); });
+  renderKeypad(meta);
   VAL.ctIndex = clamp(VAL.ctIndex, 0, meta.colortemp.length - 1);
   VAL.gIndex = clamp(VAL.gIndex, 0, meta.gamma.length - 1);
   $("#ct-val").textContent = "--";
@@ -643,7 +660,7 @@ function renderMenu() {
   let h = '<div class="m-hd">控制路径</div>';
   TARGETS.forEach((t) => {
     h += `<button class="m-it" type="button" data-id="${esc(t.id)}" title="${esc(t.id)}">${CURRENT && CURRENT.id === t.id ? SVG.tick : ""}` +
-      `<span><b>${esc(t.description)}</b><small>${esc(modelLabel(t.model))} · 通过 ${PATH_NAME[t.backend] || t.backend} · ${esc(t.address)}</small></span>${t.recommended ? "<em>推荐</em>" : ""}</button>`;
+      `<span><b>${esc(t.description)}</b><small>通过 ${PATH_NAME[t.backend] || t.backend} · ${esc(t.address)}</small></span>${t.recommended ? "<em>推荐</em>" : ""}</button>`;
   });
   h += `<div class="m-sep"></div><button class="m-it plain" type="button" data-rescan>重新查找显示器</button>`;
   menu.innerHTML = h;
@@ -727,7 +744,7 @@ async function selectTarget(id) {
   if (r.meta) applyModel(r.meta);       // 目标的机型 = 界面
   app.dataset.link = "ok";
   setDevice(t, r);
-  island(`<span class="is-ico is-check">${SVG.check}</span>已连接<span class="is-sub">${esc(modelLabel(r.model || (r.meta && r.meta.model)))}</span>`, 2200);
+  island(`<span class="is-ico is-check">${SVG.check}</span>已连接`, 2200);   // 不显示 156pin/216pin 这类内部机型名 (2026-10-12 用户要求)
   app.classList.add("screen-on");
   await readParam("brightness");
   await readParam("contrast");

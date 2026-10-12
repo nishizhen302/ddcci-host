@@ -25,7 +25,7 @@
 
   <!-- 氛围背景: 屏幕画面的大面积模糊, 随色温/亮度变 -->
   <div class="ambient" aria-hidden="true">
-    <img src="wall.svg" alt="" id="amb">
+    <img src="wall-amb.png" alt="" id="amb">
     <div class="veil" id="veil"></div>
   </div>
 
@@ -84,7 +84,7 @@
     <section class="col right" id="right">
       <div class="module remote" data-feature="keys">
         <div class="rm-head"><span>OSD 按键</span><span class="rm-hint">M · ← · → · Esc</span></div>
-        <div class="keys">
+        <div class="keys" data-model="156">
           <button class="key" data-key="menu" type="button" title="MENU (M)">
             <span class="kc"><svg viewBox="0 0 24 24"><path d="M6 7.5h12M6 12h12M6 16.5h12"/></svg></span><span class="kl">MENU</span></button>
           <button class="key" data-key="left" type="button" title="LEFT (←)">
@@ -94,6 +94,8 @@
           <button class="key" data-key="exit" type="button" title="EXIT (Esc)">
             <span class="kc"><svg viewBox="0 0 24 24"><path d="M9.5 7.5L5.5 11.5l4 4"/><path d="M5.5 11.5h9a4 4 0 0 1 0 8H13"/></svg></span><span class="kl">EXIT</span></button>
         </div>
+        <!-- 216pin 面板 7 键: 按 protocol_meta().keypad 渲染 (编号 + 推测功能, 实机试完再改名) -->
+        <div class="keys k7" id="keys-216" data-model="216" hidden></div>
       </div>
       <div class="tiles macro-row" data-model="156">
         <button class="module tile act" id="act-factory" type="button">

@@ -12,6 +12,7 @@
 
   /* 深色 */
   --base: #050507;
+  --canvas: #18142a;   /* 画布底色 = 氛围光边缘的深紫, 见 html 规则 */
   --veil: rgba(10, 10, 14, .58);
   --amb-op: .9;
   --mod: rgba(255, 255, 255, .08); --mod-hi: rgba(255, 255, 255, .13); --mod-line: rgba(255, 255, 255, .07);
@@ -27,6 +28,7 @@
 }
 :root[data-theme="light"] {
   --base: #e9e9ee;
+  --canvas: #e4e2ea;
   --veil: rgba(244, 244, 248, .66);
   --amb-op: .75;
   --mod: rgba(255, 255, 255, .58); --mod-hi: rgba(255, 255, 255, .78); --mod-line: rgba(0, 0, 0, .04);
@@ -43,6 +45,9 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
+/* 拉大窗口时内核先把新露出的区域填成画布色、界面下一帧才跟上 (Win7 版 QtWebEngine 尤其明显)。
+   画布用接近氛围光边缘的颜色, 露出来的那条就不是一道黑边; body 仍是 --base, 静止外观不变。 */
+html { background: var(--canvas); }
 body { font: 13px/1.3 var(--sf); color: var(--label); background: var(--base); -webkit-font-smoothing: antialiased; user-select: none; cursor: default; }
 button { font: inherit; color: inherit; background: none; border: 0; outline: 0; cursor: default; text-align: inherit; }
 input { font: inherit; color: inherit; outline: 0; }
@@ -64,7 +69,9 @@ svg { display: block; }
 .ambient { position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; }
 .ambient img {
   position: absolute; left: -20%; top: -25%; width: 140%; height: 150%; object-fit: cover;
-  filter: blur(70px) saturate(1.5); opacity: var(--amb-op); transform: scale(1.1);
+  /* 模糊+饱和已烘焙进 wall-amb.png (tools/bake_ambient.py): 实时 blur(70px) 让窗口缩放时整块重算,
+     Win7 版拉大窗口先黑一大块再铺满。这里只剩便宜的 brightness (JS 跟亮度改)。 */
+  opacity: var(--amb-op); transform: scale(1.1);
   transition: opacity 1.6s var(--smooth), filter .8s;
 }
 .app[data-phase="boot"] .ambient img { opacity: .18; }
@@ -183,6 +190,8 @@ svg { display: block; }
 .rm-head span:first-child { font-size: 12px; font-weight: 600; color: var(--label-2); }
 .rm-hint { font: 11px/1 var(--mono); color: var(--label-3); }
 .keys { display: grid; grid-template-columns: repeat(4, 1fr); grid-gap: 8px; }
+.keys.k7 { grid-template-columns: repeat(7, 1fr); grid-gap: 6px; }
+.kn { font: 600 15px/1 var(--sf); }
 .key { display: flex; flex-direction: column; align-items: center; }
 .kc {
   width: 100%; max-width: 64px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center;

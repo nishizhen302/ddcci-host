@@ -321,11 +321,11 @@ class Api:
 
     def press_key(self, name):
         try:
-            if name not in nw.KEYS:
-                raise ValueError("未知按键 %r" % name)
             dev = self._ensure()
+            if not dev.has_key(name):
+                raise ValueError("未知按键 %r" % name)
             dev.press_key(name)
-            return {"ok": True, "tx": nw.frame_hex(nw.key_payload(nw.KEYS[name]), dev.slave)}
+            return {"ok": True, "tx": nw.frame_hex(dev.key_payload_for(name), dev.slave)}
         except Exception as e:
             return _err(e)
 
@@ -376,6 +376,7 @@ class Api:
                              "keys": info["keys"], "choices": info["choices"]},
                 "colortemp": cls.COLORTEMP,
                 "gamma": cls.GAMMA,
+                "keypad": cls.KEYPAD,          # 216pin 的 7 键 (编号/推测功能); 156pin 为 None 用固定 4 键
                 "ops": {"brightness": nw.OP_BRIGHTNESS, "contrast": nw.OP_CONTRAST,
                         "colortemp": nw.OP_COLORTEMP, "gamma": nw.OP_GAMMA}}
 
@@ -478,7 +479,8 @@ def main():
         os.path.join(HERE, "ui", "nanwei", "index.html"),
         js_api=api,
         width=690, height=420, min_size=(640, 400),
-        background_color="#0a0a0b",
+        # 页面画出来之前的窗口底色, 取界面边缘的深紫 (拉大窗口时露边的颜色由 style.css 的 html 画布色管)
+        background_color="#18142a",
         frameless=True, easy_drag=False,
     )
     func = None if os.environ.get("DDCCI_NOSTYLE") else winchrome.style_native_window

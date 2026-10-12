@@ -198,8 +198,11 @@ def main(argv):
 
         if cmd == "key":
             name = argv[2].lower()
-            if name in nw.KEYS:
-                value = nw.KEYS[name]
+            if dev.has_key(name):           # 216pin 另有 k1~k7 (面板 7 键)
+                print("TX  %s" % nw.frame_hex(dev.key_payload_for(name), dev.slave))
+                dev.press_key(name)
+                print("按键 %s 已发 (无回读, 看屏幕 OSD)" % name)
+                return 0
             else:
                 value = int(name, 0) & 0xFF   # 逆向 PDF 未列出的键: 直接给键值
                 name = "0x%02X" % value

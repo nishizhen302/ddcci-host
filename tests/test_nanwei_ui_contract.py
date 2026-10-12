@@ -146,3 +146,38 @@ def test_qt_waits_for_webchannel_before_first_call():
     assert "qtwebengine" in ready and "_QWebChannel" in ready
     boot = js[js.index("requestAnimationFrame(() => setTimeout"):]
     assert "!window.pywebview" in boot        # 演示数据只给浏览器直接打开用
+
+
+def test_ambient_blur_is_baked_not_live():
+    """背景的 blur(70px) 已烘焙进 wall-amb.png (tools/bake_ambient.py)。实时大模糊会让 Win7 版
+    拉大窗口时先黑一大块、松手 1 秒才铺满 (2026-10-12 实测), 别加回来。"""
+    assert 'id="amb"' in _html() and 'src="wall-amb.png"' in _html()
+    assert (ROOT / "ui" / "nanwei" / "wall-amb.png").is_file()
+    css = re.sub(r"/\*.*?\*/", "", _css(), flags=re.S)       # 注释里提到原来的 blur 不算
+    amb = css[css.index(".ambient img {"):]
+    assert "blur(" not in amb[:amb.index("}")]
+    js = _js()
+    line = js[js.index('$("#amb").style.filter'):]
+    assert "blur(" not in line[:line.index("\n")]
+
+
+def test_internal_model_names_never_shown():
+    """156pin / 216pin / 标准显示器 只是内部机型, 界面上不显示 (2026-10-12 用户要求)。"""
+    js = _js()
+    assert "modelLabel" not in js
+    menu = js[js.index("function renderMenu"):js.index("$(\"#dev-pick\").addEventListener")]
+    assert "t.model" not in menu                # 菜单小字只写连接方式和地址
+    line = js[js.index("已连接`"):].splitlines()[0]
+    assert "model" not in line                  # 灵动岛只写"已连接"
+
+
+def test_216_keypad_rendered_from_meta():
+    """216pin 面板 7 键由后端 keypad 表渲染 (改名只改 nanwei_core.KEYPAD_216); 156pin 仍是固定 4 键。"""
+    html = _html()
+    assert 'id="keys-216"' in html
+    tag = html[html.index('id="keys-216"') - 40:html.index('id="keys-216"') + 40]
+    assert 'data-model="216"' in tag
+    four = html[html.index('<div class="keys"'):]
+    assert 'data-model="156"' in four[:60]
+    js = _js()
+    assert "meta.keypad" in js and "#hold-key" in js

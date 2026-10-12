@@ -86,6 +86,14 @@ class NanweiMonitor:
         """写参数。"""
         return self._be.set_vcp(self._mon, op, value & 0xFF)
 
+    KEYPAD = None          # 156pin 是界面里固定的 4 键; 216pin 由 KEYPAD 表渲染
+
+    def has_key(self, name):
+        return name in KEYS
+
+    def key_payload_for(self, name):
+        return key_payload(KEYS[name])
+
     def press_key(self, name):
         """模拟按键 menu/right/left/exit/ok (非标 0xC0 帧, 无回读)。"""
         return self._be.send_raw(self._mon, key_payload(KEYS[name]))
@@ -166,9 +174,29 @@ SUB_GAMMA_216 = 0x91
 KEY_MODE_TAP = 0x00
 KEY_MODE_HOLD = 0x01
 KEY_RELEASE_216 = 0xFF
-# mode 01 的 key 编号 = 最终按键消息号; mode 00 时固件把 1/2 互换。
-# 为了让"点一下 RIGHT"和"按住 RIGHT"是同一个键, 按住时 right/left 用互换后的编号。
-HOLD_KEYS_216 = {"menu": 0x00, "right": 0x02, "left": 0x01, "exit": 0x03, "ok": 0x04}
+# 216pin 面板有 7 个物理键: ADC 按键扫描表 (两路电压各若干区间) -> 掩码 -> 按键消息号 0/1/2/3/6/8/9
+# (docs/protocol-216pin.md 第 5 节)。只有 MENU/EXIT 能确定, 其余功能没在实机试过:
+# 界面先按 1~7 编号、小字写推测, 用户实机试完再改 label/hint (2026-10-12)。
+# alias = 键盘快捷键 / 156pin 叫法对应到哪个键 (必须和下面 HOLD_KEYS_216 的同名项是同一个消息号)。
+KEYPAD_216 = [
+    {"id": "k1", "msg": 0, "label": "1", "hint": "MENU", "alias": "menu"},
+    {"id": "k2", "msg": 1, "label": "2", "hint": "左?", "alias": "left"},
+    {"id": "k3", "msg": 2, "label": "3", "hint": "右?", "alias": "right"},
+    {"id": "k4", "msg": 3, "label": "4", "hint": "EXIT", "alias": "exit"},
+    {"id": "k5", "msg": 6, "label": "5", "hint": "?", "alias": None},
+    {"id": "k6", "msg": 8, "label": "6", "hint": "?", "alias": None},
+    {"id": "k7", "msg": 9, "label": "7", "hint": "?", "alias": None},
+]
+# 键名 -> 按键消息号。mode 01 (按住) 直接发消息号; mode 00 (点按) 固件会把 1/2 互换, 发之前先换回来,
+# 保证"点一下"和"按住"是同一个键。menu/left/right/exit/ok 沿用 156pin 的叫法 (键盘快捷键/CLI):
+# 156 点按 right 发 1 -> 216 固件得到消息 2, 所以 right = 消息 2。ok (消息 4) 不对应任何物理键。
+HOLD_KEYS_216 = {"menu": 0x00, "left": 0x01, "right": 0x02, "exit": 0x03, "ok": 0x04}
+HOLD_KEYS_216.update({k["id"]: k["msg"] for k in KEYPAD_216})
+
+
+def tap_code_216(msg):
+    """点按 (mode 00) 要发的键值: 消息 1/2 互换, 其余原样。"""
+    return {1: 2, 2: 1}.get(msg, msg)
 HOLD_MAX_SEC = 30.0
 
 
@@ -187,6 +215,18 @@ class Monitor216(NanweiMonitor):
     model = "216"
     COLORTEMP = COLORTEMP_VALUES_216
     GAMMA = GAMMA_VALUES_216
+
+    KEYPAD = KEYPAD_216
+
+    def has_key(self, name):
+        return name in HOLD_KEYS_216
+
+    def key_payload_for(self, name):
+        return key_payload_216(tap_code_216(HOLD_KEYS_216[name]), KEY_MODE_TAP)
+
+    def press_key(self, name):
+        """点一下 (mode 00)。name = k1~k7 或 menu/left/right/exit/ok。"""
+        return self._be.send_raw(self._mon, self.key_payload_for(name))
 
     def choice_payload(self, kind, value):
         if kind == "gamma":
