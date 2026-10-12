@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""南微控制台 UI 结构契约。
+"""南微控制台 UI 结构契约 (2026-10-12 v4 界面)。
 
-这些测试不跑浏览器, 只保护正式 HTML 的关键信息架构:
-- OSD 常驻在主界面
-- 图像 / 色彩 / 日志藏进更多设置
-- 目标选择是控制路径选择, 地址只作为探测结果展示
+这些测试不跑浏览器, 只保护正式 HTML 的关键信息架构 (布局由用户逐项定过):
+- 左栏 = 显示器 + 型号/连接方式; 右栏自上而下 = OSD 按键 → 宏/长按 → 色温/Gamma → 亮度/对比度
+- 发送键值 / 通信记录 / 版本号是左下角不显眼的小字
+- 目标选择是控制路径选择, 地址和机型只作为探测结果展示
 """
+import re
 from pathlib import Path
 
 
@@ -16,81 +17,110 @@ def _html():
     return (ROOT / "ui" / "nanwei" / "index.html").read_text(encoding="utf-8")
 
 
-def test_nanwei_ui_has_target_picker_and_auto_address_result():
-    html = _html()
-    assert 'class="target-picker"' in html
-    assert 'id="target-name"' in html
-    assert 'id="addr-chip"' in html
-    assert 'id="addr-seg"' not in html
-
-
-def test_nanwei_ui_keeps_osd_before_secondary_drawer():
-    html = _html()
-    assert html.index('class="panel remote"') < html.index('class="more-drawer"')
-
-
-def test_nanwei_ui_keeps_macro_buttons_next_to_osd_keys():
-    """工厂菜单/老化两个宏按钮 + 自定义键值行必须留在 OSD 面板里 (曾整批丢失过)。"""
-    html = _html()
-    assert 'id="factory-btn"' in html and 'id="aging-btn"' in html
-    assert 'id="raw-key-send"' in html
-    assert html.index('class="key-grid"') < html.index('class="macro-row"')
-    assert html.index('class="macro-row"') < html.index('class="more-drawer"')
-
-
-def test_nanwei_ui_shows_version_in_titlebar():
-    """标题栏版本号是判断"现场那台机器跑的是哪一版"的唯一手段, 别被布局重构顺手删掉。"""
-    html = _html()
-    assert 'id="ver-label"' in html
-    # 必须标 no-drag: 标题栏整条是拖动区, 不排除就点不出"检查更新"
-    assert html.index('id="ver-label"') < html.index('id="conn"')
-    ver_tag = html[html.index('<span id="ver-label"'):]
-    ver_tag = ver_tag[:ver_tag.index(">")]
-    assert "pywebview-no-drag" in ver_tag
+def _js():
+    return (ROOT / "ui" / "nanwei" / "app.js").read_text(encoding="utf-8")
 
 
 def _css():
     return (ROOT / "ui" / "nanwei" / "style.css").read_text(encoding="utf-8")
 
 
-def test_every_color_mix_has_a_win7_fallback_in_front():
-    """Win7 版走 QtWebEngine(Chromium 83), 不认 color-mix(), 整条声明会被丢弃。
-
-    约定: 每条含 color-mix 的声明前面必须紧挨一条同属性的 fallback 声明 (用 :root 里
-    预计算好的变量)。新写样式时忘了垫 fallback = Win7 上那处颜色直接没有, 这里拦住。
-    """
-    import re
-    css = re.sub(r"/\*.*?\*/", "", _css(), flags=re.S)          # 注释里提到 color-mix 不算
-    # 按 ; 切成声明 (多行简写也能整条拿到), 每条取属性名
-    decls = [d.strip() for d in css.replace("{", ";").replace("}", ";").split(";")]
-    decls = [" ".join(d.split()) for d in decls if ":" in d]
-    missing = []
-    for i, decl in enumerate(decls):
-        if "color-mix" not in decl or decl.startswith("--"):
-            continue
-        prop = decl.split(":", 1)[0].strip()
-        prev = decls[i - 1] if i else ""
-        if not prev.startswith(prop + ":") or "color-mix" in prev:
-            missing.append(decl)
-    assert not missing, "这些 color-mix 声明缺 Win7 fallback: %r" % missing
+def _right(html):
+    return html[html.index('class="col right"'):]
 
 
-def test_flex_gap_containers_are_patched_for_win7():
-    """Chromium 83 不支持 flex 容器的 gap (grid 的不受影响)。
-
-    样式表末尾的补丁把这些容器 gap 归 0 + 改 margin 复刻; 少一个 = Win7 上那处挤成一团。
-    """
-    css = _css()
-    flex_gap_containers = [".brand", ".title-actions", ".target-option",
-                           ".chip-row", ".seg", ".macro-btn", ".raw-key-row"]
-    patch = css[css.index("flex-gap 兼容补丁"):]
-    for sel in flex_gap_containers:
-        assert sel in patch, "%s 没进 Win7 flex-gap 补丁" % sel
-
-
-def test_nanwei_ui_hides_image_color_and_log_under_more_settings():
+def test_target_picker_shows_path_and_detected_address():
     html = _html()
-    assert 'class="more-drawer"' in html
-    assert 'class="panel accordion primary"' in html
-    assert 'class="panel accordion settings"' in html
-    assert 'class="log-drawer"' in html
+    assert 'id="dev-name"' in html and 'id="dev-sub"' in html and 'id="dev-menu"' in html
+    # 选显示器点名称本身; 名称下面那行只是状态 (2026-10-12 用户要求)
+    pick = html[html.index('id="dev-pick"'):]
+    assert pick.index('id="dev-name"') < pick.index('</button>')
+    sub = html[html.index('id="dev-sub"') - 40:html.index('id="dev-sub"')]
+    assert "<p" in sub
+    assert 'id="addr-seg"' not in html          # 地址自动探测, 不给手选
+    js = _js()
+    assert "t.address" in js                    # 探测到的地址显示在连接方式里
+
+
+def test_right_column_order_matches_user_layout():
+    """用户 2026-10-12 截图定的顺序: OSD 键 → 工厂/老化 (或长按) → 色温/Gamma → 亮度/对比度。"""
+    r = _right(_html())
+    order = ['class="module remote"', 'id="act-factory"', 'id="hold-tile"',
+             'id="t-colortemp"', 'id="t-gamma"', 'id="s-brightness"', 'id="s-contrast"']
+    pos = [r.index(x) for x in order]
+    assert pos == sorted(pos), "右栏顺序被改乱了: %r" % order
+
+
+def test_osd_keys_are_the_four_panel_keys_in_panel_order():
+    r = _right(_html())
+    keys = re.findall(r'class="key" data-key="(\w+)"', r)
+    assert keys == ["menu", "left", "right", "exit"]
+
+
+def test_macro_buttons_and_raw_key_kept():
+    """工厂菜单/老化两个宏 + 发送键值入口必须在 (曾整批丢失过)。"""
+    html = _html()
+    assert 'id="act-factory"' in html and 'id="act-aging"' in html
+    assert 'id="act-raw"' in html
+    js = _js()
+    assert "enter_factory" in js and "start_aging" in js and "press_key_raw" in js
+
+
+def test_raw_key_log_and_version_are_low_key_in_left_column():
+    """发送键值 / 通信记录 / 版本号放左下角小字, 不占右栏。"""
+    html = _html()
+    left = html[html.index('class="col left"'):html.index('class="col right"')]
+    util = left[left.index('class="util"'):]
+    for el in ('id="act-raw"', 'id="act-log"', 'id="ver-label"'):
+        assert el in util, el + " 不在左下角"
+
+
+def test_version_label_is_visible_and_clickable():
+    """版本号是判断"现场那台机器跑的是哪一版"的唯一手段, 别被布局重构顺手删掉。"""
+    html = _html()
+    tag = html[html.index('id="ver-label"') - 80:]
+    tag = tag[tag.index("<button"):]
+    tag = tag[:tag.index(">")]
+    assert "pywebview-no-drag" in tag
+    js = _js()
+    assert "app_version" in js and "check_update" in js and "open_repo" in js
+
+
+def test_no_manual_model_selector():
+    """机型按应答自动识别, 选目标即切界面; 不要启动选择页, 也不要单独的机型下拉框 (2026-10-12 用户要求)。"""
+    html = _html()
+    assert 'model-screen' not in html and 'id="model-select"' not in html
+    assert 'id="model-chip"' not in html        # 识别结果也不单独显示 (用户嫌小标签丑, 2026-10-12)
+    assert "r.meta" in _js()                    # 连上目标后按它的机型切界面
+
+
+def test_model_specific_rows_are_tagged():
+    """156pin 才有工厂/老化宏, 216pin 才有长按; 前端按 data-model 显隐。"""
+    html = _html()
+    macro = html[html.index('macro-row'):]
+    assert 'data-model="156"' in macro[:60]
+    assert macro.index('id="act-factory"') < macro.index('</div>')
+    hold = html[html.index('hold-row'):]
+    assert 'data-model="216"' in hold[:60]
+    for el in ('id="hold-send"', 'id="hold-key"', 'id="hold-sec"'):
+        assert el in hold
+    assert "hold_key" in _js()
+
+
+def test_choices_go_through_get_set_choice():
+    """色温/Gamma 两种机型读回规则不同, 必须走后端换算过的 get_choice / set_choice。"""
+    js = _js()
+    assert "get_choice(" in js and "set_choice(" in js
+    assert "set_param(META.ops.colortemp" not in js and "set_param(META.ops.gamma" not in js
+
+
+def test_css_is_chromium83_safe():
+    """Win7 版走 QtWebEngine (Chromium 83): 不认 color-mix()、flex 容器的 gap、inset 简写、aspect-ratio。
+
+    grid 的 gap 不受影响, 用 grid-gap 写。新写样式时用了这些 = Win7 上那处直接失效, 这里拦住。
+    """
+    css = re.sub(r"/\*.*?\*/", "", _css(), flags=re.S)
+    assert "color-mix" not in css
+    assert "aspect-ratio" not in css
+    assert not re.search(r"(^|[;{\s])gap\s*:", css), "用了 gap:, 改成 grid-gap 或 margin"
+    assert not re.search(r"(^|[;{\s])inset\s*:", css), "用了 inset 简写, 改成 left/top/right/bottom"

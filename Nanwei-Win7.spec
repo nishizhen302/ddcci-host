@@ -19,7 +19,7 @@
 - UPX 关闭: 压缩会破坏 Qt5 DLL / QtWebEngineProcess.exe。
 - 必带 tools/nvddc32.exe (32 位 nvapi helper): 英伟达机上 64 位 nvapi 是死路, gpu 后端
   靠它收发。它是 32 位原生 exe, 只能当数据文件带, 进 binaries 会被 PyInstaller 去分析依赖。
-- 前端已做 Chromium 83 兼容 (ui/nanwei/style.css 末尾 flex-gap 补丁 + color-mix fallback,
+- 前端按 Chromium 83 写 (ui/nanwei/style.css 不用 flex gap / color-mix / inset 简写,
   ui/nanwei/app.js 里 QtWebEngine 分支手挂标题栏拖动)。
 
 产物: dist/DDCCI-Nanwei-Win7/DDCCI-Nanwei-Win7.exe (整目录拷到 Win7 即可跑)。

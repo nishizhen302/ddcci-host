@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDC 控制台</title>
+<script>
+  // 先定主题再出第一帧, 避免深浅闪一下
+  try { document.documentElement.dataset.theme = localStorage.getItem("ddc-theme") || "dark"; }
+  catch (e) { document.documentElement.dataset.theme = "dark"; }
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- 无边框窗口的 8 个缩放手柄 (WM_NCHITTEST 编号, 与 winchrome.py 一致) -->
+<div class="resz t"  data-ht="12"></div><div class="resz b"  data-ht="15"></div>
+<div class="resz l"  data-ht="10"></div><div class="resz r"  data-ht="11"></div>
+<div class="resz tl" data-ht="13"></div><div class="resz tr" data-ht="14"></div>
+<div class="resz bl" data-ht="16"></div><div class="resz br" data-ht="17"></div>
+
+<div class="app" id="app" data-phase="boot" data-link="scan">
+
+  <!-- ===== 标题栏 ===== -->
+  <header class="top pywebview-drag-region">
+    <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="2.5" y="4" width="19" height="12.5" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M9 20h6M12 16.5V20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <circle class="mark-dot" cx="12" cy="10.25" r="2.1"/>
+    </svg>
+    <b class="app-name">DDC 控制台</b>
+    <button id="ver-label" class="ver pywebview-no-drag" type="button" title="检查更新">v…</button>
+    <span class="flex"></span>
+    <button id="skin" class="tb pywebview-no-drag" type="button" title="切换深色 / 浅色">
+      <svg class="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>
+    </button>
+    <button id="win-min" class="tb pywebview-no-drag" type="button" title="最小化">
+      <svg viewBox="0 0 24 24"><path d="M6 12.5h12"/></svg>
+    </button>
+    <button id="win-close" class="tb close pywebview-no-drag" type="button" title="关闭">
+      <svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg>
+    </button>
+  </header>
+
+  <div class="body">
+
+    <!-- ===== 舞台: 显示器数字孪生 ===== -->
+    <section class="stage" id="stage">
+      <div class="backdrop"></div>
+      <div class="spill" id="spill"></div>
+
+      <!-- 目标: 点名字切换控制路径 -->
+      <div class="target" id="target">
+        <div class="t-state"><i class="dot" id="pulse"></i><span id="conn">正在扫描显示器…</span></div>
+        <button class="t-name" id="target-btn" type="button">
+          <span id="target-name">—</span>
+          <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></svg>
+        </button>
+        <div class="t-meta" id="target-meta">
+          <span id="m-path">—</span><span id="m-addr">0x--</span><span id="m-ver">HW v-- · SW v--</span>
+        </div>
+        <div class="t-menu" id="target-menu" role="listbox"></div>
+      </div>
+
+      <!-- DDC 线 + 数据包 -->
+      <svg class="cable" id="cable" aria-hidden="true">
+        <defs>
+          <radialGradient id="pk-tx"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#cfe6ff" stop-opacity=".9"/><stop offset="1" stop-color="#8ec5ff" stop-opacity="0"/></radialGradient>
+          <radialGradient id="pk-rx"><stop offset="0" stop-color="#eafff0"/><stop offset=".35" stop-color="#5dfc8d" stop-opacity=".9"/><stop offset="1" stop-color="#30d158" stop-opacity="0"/></radialGradient>
+          <radialGradient id="pk-err"><stop offset="0" stop-color="#fff0ee"/><stop offset=".35" stop-color="#ff6b5e" stop-opacity=".9"/><stop offset="1" stop-color="#ff453a" stop-opacity="0"/></radialGradient>
+        </defs>
+        <path class="c-under" id="cable-under"/>
+        <path class="c-line" id="cable-line"/>
+        <g id="packets"></g>
+      </svg>
+      <div class="host" id="host">
+        <div class="h-ico" id="host-ico"></div>
+        <span id="host-label">主机</span>
+      </div>
+      <div class="frame-tag" id="frame-tag"></div>
+
+      <!-- 显示器 -->
+      <div class="twin" id="twin">
+        <div class="monitor" id="monitor">
+          <div class="halo" id="halo"></div>
+          <div class="panel">
+            <div class="screen" id="screen">
+              <div class="pic" id="pic">
+                <svg class="wall" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="w-sky" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#07142e"/><stop offset=".38" stop-color="#25336d"/>
+                      <stop offset=".62" stop-color="#9a4f7a"/><stop offset=".78" stop-color="#f08a5d"/>
+                      <stop offset="1" stop-color="#ffd59a"/>
+                    </linearGradient>
+                    <radialGradient id="w-sun" cx=".5" cy=".5" r=".5">
+                      <stop offset="0" stop-color="#fff6dc"/><stop offset=".25" stop-color="#ffe2a8"/>
+                      <stop offset=".6" stop-color="#ffb86b" stop-opacity=".35"/><stop offset="1" stop-color="#ff9a5c" stop-opacity="0"/>
+                    </radialGradient>
+                    <linearGradient id="w-m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a4f8f"/><stop offset="1" stop-color="#53407e"/></linearGradient>
+                    <linearGradient id="w-m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3c3470"/><stop offset="1" stop-color="#2a2a5a"/></linearGradient>
+                    <linearGradient id="w-m3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2148"/><stop offset="1" stop-color="#141736"/></linearGradient>
+                    <linearGradient id="w-lake" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7a46a" stop-opacity=".55"/><stop offset="1" stop-color="#0c1030" stop-opacity="0"/></linearGradient>
+                  </defs>
+                  <rect width="1600" height="900" fill="url(#w-sky)"/>
+                  <g fill="#fff" opacity=".8">
+                    <circle cx="180" cy="90" r="1.6"/><circle cx="420" cy="160" r="1.1"/><circle cx="610" cy="60" r="1.4"/>
+                    <circle cx="930" cy="120" r="1"/><circle cx="1130" cy="70" r="1.7"/><circle cx="1380" cy="150" r="1.2"/>
+                    <circle cx="1500" cy="50" r="1"/><circle cx="300" cy="230" r=".9"/><circle cx="1240" cy="230" r=".9"/>
+                  </g>
+                  <circle cx="1010" cy="560" r="300" fill="url(#w-sun)"/>
+                  <circle cx="1010" cy="560" r="58" fill="#fff3d6"/>
+                  <path fill="url(#w-m1)" d="M0 560 L140 470 L260 520 L420 400 L560 500 L700 450 L860 540 L1000 470 L1150 540 L1300 430 L1460 520 L1600 470 V900 H0Z"/>
+                  <path fill="url(#w-m2)" d="M0 620 L180 540 L330 600 L480 520 L640 610 L820 560 L980 640 L1180 560 L1340 630 L1480 580 L1600 620 V900 H0Z"/>
+                  <rect y="660" width="1600" height="240" fill="#141736"/>
+                  <rect y="660" width="1600" height="240" fill="url(#w-lake)"/>
+                  <rect x="930" y="672" width="160" height="5" rx="2.5" fill="#ffe7b8" opacity=".75"/>
+                  <rect x="960" y="694" width="100" height="4" rx="2" fill="#ffe7b8" opacity=".5"/>
+                  <rect x="985" y="714" width="50" height="3" rx="1.5" fill="#ffe7b8" opacity=".35"/>
+                  <path fill="url(#w-m3)" d="M0 900 V690 L120 650 L260 700 L380 640 L520 720 L640 900Z"/>
+                  <path fill="url(#w-m3)" d="M1600 900 V660 L1480 620 L1360 690 L1240 650 L1120 740 L1040 900Z"/>
+                </svg>
+                <!-- 灰阶条: 让 Gamma 变化肉眼可见 -->
+                <div class="ramp" id="ramp"></div>
+              </div>
+              <div class="tint" id="tint"></div>
+              <div class="glass"></div>
+              <div class="nosig" id="nosig"><b>无信号</b><span>DDC/CI</span></div>
+            </div>
+          </div>
+          <div class="chin"><span class="logo" id="chin-logo">DDC</span><i class="led" id="led"></i></div>
+        </div>
+        <div class="neck"></div>
+        <div class="foot"></div>
+
+        <!-- OSD 按键台 -->
+        <div class="deck" id="deck">
+          <button class="k" type="button" data-key="menu" title="MENU  (M)">
+            <svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span>MENU</span></button>
+          <button class="k" type="button" data-key="left" title="LEFT  (←)">
+            <svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg><span>LEFT</span></button>
+          <button class="k" type="button" data-key="right" title="RIGHT  (→)">
+            <svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg><span>RIGHT</span></button>
+          <button class="k" type="button" data-key="exit" title="EXIT  (Esc)">
+            <svg viewBox="0 0 24 24"><path d="M9 7L4.5 11.5 9 16"/><path d="M4.5 11.5H15a4.5 4.5 0 0 1 0 9h-2"/></svg><span>EXIT</span></button>
+          <i class="sep"></i>
+          <button class="k macro" type="button" id="factory-btn" data-api="enter_factory" data-seq="menu,ok" title="进入工厂菜单  MENU → OK">
+            <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>
+            <span>工厂菜单</span><em class="seq"></em></button>
+          <button class="k macro" type="button" id="aging-btn" data-api="start_aging" data-seq="menu,ok,menu,menu,right,menu,exit,exit" title="开启老化  工厂菜单 → 老化">
+            <svg viewBox="0 0 24 24"><path d="M7 3.5h10M7 20.5h10M8 3.5c0 4.5 8 4.5 8 8.5s-8 4-8 8.5M16 3.5c0 4.5-8 4.5-8 8.5"/></svg>
+            <span>开启老化</span><em class="seq"></em></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 检查器: 图像 / 色彩 ===== -->
+    <aside class="inspector" id="inspector">
+      <div class="grp" data-op="brightness">
+        <div class="g-head">
+          <label>亮度</label>
+          <div class="num"><button class="nudge" data-d="-1" type="button" title="−1">
+            <svg viewBox="0 0 24 24"><path d="M14 7l-5 5 5 5"/></svg></button><output id="brightness-out">--</output><button class="nudge" data-d="1" type="button" title="+1">
+            <svg viewBox="0 0 24 24"><path d="M10 7l5 5-5 5"/></svg></button></div>
+        </div>
+        <div class="scale" id="brightness" tabindex="0" role="slider" aria-label="亮度" data-min="0" data-max="100" data-value="0"></div>
+      </div>
+
+      <div class="grp" data-op="contrast">
+        <div class="g-head">
+          <label>对比度</label>
+          <div class="num"><button class="nudge" data-d="-1" type="button" title="−1">
+            <svg viewBox="0 0 24 24"><path d="M14 7l-5 5 5 5"/></svg></button><output id="contrast-out">--</output><button class="nudge" data-d="1" type="button" title="+1">
+            <svg viewBox="0 0 24 24"><path d="M10 7l5 5-5 5"/></svg></button></div>
+        </div>
+        <div class="scale" id="contrast" tabindex="0" role="slider" aria-label="对比度" data-min="0" data-max="100" data-value="0"></div>
+      </div>
+
+      <div class="grp">
+        <div class="g-head"><label>色温</label><span class="g-val" id="colortemp-out">--</span></div>
+        <div class="swatches" id="colortemp-seg"></div>
+      </div>
+
+      <div class="grp">
+        <div class="g-head"><label>Gamma</label><span class="g-val" id="gamma-out">--</span></div>
+        <svg class="curve" id="curve" viewBox="0 0 260 92" preserveAspectRatio="none">
+          <g class="grid"></g>
+          <path class="diag" d="M0 92 L260 0"/>
+          <path class="area" id="curve-area"/>
+          <path class="ghost" id="curve-ghost"/>
+          <path class="line" id="curve-line"/>
+        </svg>
+        <div class="chips" id="gamma-seg"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===== 底部通信栏 + 日志抽屉 ===== -->
+  <footer class="console" id="console">
+    <div class="drawer" id="drawer">
+      <div class="d-head">
+        <b>通信记录</b><span id="log-count">0 条</span><span class="flex"></span>
+        <button type="button" id="log-copy">复制</button><button type="button" id="log-clear">清空</button>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+    <div class="bar">
+      <button class="last" id="log-toggle" type="button" title="展开通信记录">
+        <i class="lamp" id="lamp"></i>
+        <span class="l-label" id="last-label">等待连接</span>
+        <code id="last-frame"></code>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5"/></svg>
+      </button>
+      <label class="raw" title="发送任意键值 (00~FF), 用来试 PDF 没列出的键, 例如 OK = 04">
+        <span>键值</span><em>0x</em><input id="raw-key" value="04" maxlength="4" spellcheck="false">
+        <button id="raw-key-send" type="button" title="发送">
+          <svg viewBox="0 0 24 24"><path d="M5 12h12M13 7l5 5-5 5"/></svg></button>
+      </label>
+    </div>
+  </footer>
+</div>
+
+<!-- Gamma 预览滤镜: 屏幕画面按选中曲线做幂次映射 -->
+<svg width="0" height="0" style="position:absolute">
+  <filter id="gammaF" color-interpolation-filters="sRGB">
+    <feComponentTransfer>
+      <feFuncR id="gR" type="gamma" amplitude="1" exponent="1" offset="0"/>
+      <feFuncG id="gG" type="gamma" amplitude="1" exponent="1" offset="0"/>
+      <feFuncB id="gB" type="gamma" amplitude="1" exponent="1" offset="0"/>
+    </feComponentTransfer>
+  </filter>
+</svg>
+<script src="app.js"></script>
+</body>
+</html>

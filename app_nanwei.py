@@ -27,6 +27,13 @@ HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 WIN_TITLE = "DDCCI控制台"
 
 
+def _default_settings_path():
+    # 页面由 pywebview 的随机端口 http 服务提供, origin 每次启动都变 -> localStorage 记不住东西;
+    # 需要跨启动保留的选择 (机型) 存这里。
+    base = os.environ.get("APPDATA") or os.path.expanduser("~")
+    return os.path.join(base, "DDCCI-Nanwei", "settings.json")
+
+
 def _err(e, backend=None):
     hint = None
     if isinstance(e, RuntimeError):
@@ -43,10 +50,33 @@ def _err(e, backend=None):
 class Api:
     """JS 桥。所有方法返回 JSON-able 状态对象, 不抛异常给前端; 附 tx 帧十六进制供日志窗。"""
 
-    def __init__(self, backend_name="rawusb"):
+    def __init__(self, backend_name="rawusb", settings_path=None):
         self._backend_name = backend_name
         self._be = None
         self._dev = None
+        self._settings_path = settings_path or _default_settings_path()
+        self._model = self._load_settings().get("model", nw.DEFAULT_MODEL)
+        if self._model not in nw.MODEL_IDS:
+            self._model = nw.DEFAULT_MODEL
+
+    def _load_settings(self):
+        try:
+            with open(self._settings_path, encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def _save_settings(self, **changes):
+        """写失败 (只读目录等) 不影响使用, 只是下次启动不记得。"""
+        try:
+            data = self._load_settings()
+            data.update(changes)
+            os.makedirs(os.path.dirname(self._settings_path), exist_ok=True)
+            with open(self._settings_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=1)
+        except Exception:
+            pass
 
     def _ensure(self):
         if self._dev is None:
@@ -58,16 +88,46 @@ class Api:
 
         关窗时必须调 —— 不调就留一个 nvddc32.exe 在任务管理器里 (2026-07-30 实遇)。
         """
-        be, self._be, self._dev = self._be, None, None
+        dev, be, self._be, self._dev = self._dev, self._be, None, None
+        if dev is not None and hasattr(dev, "release_keys"):
+            try:
+                dev.release_keys()      # 216pin: 关窗时万一还按着键, 补发松开
+            except Exception:
+                pass
         if be is not None:
             try:
                 be.close()
             except Exception:
                 pass
 
+    # ---- 机型 (启动选择页) ----
+    def models(self):
+        """可选机型。slaves 给前端显示用十六进制串。"""
+        out = []
+        for m in nw.MODELS:
+            item = dict(m)
+            item["slaves"] = ["0x%02X" % a for a in m["slaves"]]
+            out.append(item)
+        return {"ok": True, "models": out, "current": self._model}
+
+    def select_model(self, model_id):
+        """切机型: 断开当前连接, 之后的扫描/建链/控件都按新机型来。返回新机型的协议常量。"""
+        try:
+            nw.model_info(model_id)
+            self.shutdown()
+            self._model = str(model_id)
+            self._save_settings(model=self._model)
+            return self.protocol_meta()
+        except Exception as e:
+            return _err(e)
+
+    def _model_cls(self):
+        return nw.Monitor216 if self._model == "216" else nw.NanweiMonitor
+
     # ---- 连接 / 选显示器 ----
     def discover_targets(self):
-        """扫描可用控制路径。地址 0x5E/0x6E 自动探测, UI 只选择路径。
+        """扫描可用控制路径。地址 0x5E/0x6E 都探, 每台应答的显示器自动识别机型
+        (nw.detect_model), 前端选中哪个目标就按它的机型切界面 —— 客户不用手选机型。
 
         快扫: gpu 只探显示器级通道 (fallback_scan=False), 启动明显更快;
         全部落空时才放开 line 盲扫重扫一次 gpu (保底不丢功能)。
@@ -93,6 +153,7 @@ class Api:
                         "address": "0x%02X" % slave,
                         "mon_id": m.id,
                         "description": m.description,
+                        "model": nw.detect_model(be, m.id),
                         "recommended": name == "rawusb",
                     })
             except Exception as e:
@@ -108,15 +169,16 @@ class Api:
         for name in ("rawusb", "gpu"):
             if name not in backends:
                 backends.append(name)
+        slaves = nw.ALL_SLAVES
         for name in backends:
-            for slave in (0x5E, 0x6E):
+            for slave in slaves:
                 if name == "gpu":
                     scan(name, slave, fallback_scan=False)
                 else:
                     scan(name, slave)
         if not targets:
             errors.append("快扫无目标, 放开 line 盲扫重试 gpu")
-            for slave in (0x5E, 0x6E):
+            for slave in slaves:
                 scan("gpu", slave, fallback_scan=True)
         targets.sort(key=lambda t: (0 if t["recommended"] else 1, t["backend"], t["address"], t["mon_id"]))
         return {"ok": True, "targets": targets, "errors": errors}
@@ -131,16 +193,22 @@ class Api:
             backend_name = str(target.get("backend") or self._backend_name)
             slave = int(str(target.get("address") or "0x5E"), 0)
             mon_id = int(target.get("mon_id", 0))
+            model = str(target.get("model") or self._model)
+            nw.model_info(model)
+            if model != self._model:
+                self._model = model
+                self._save_settings(model=model)
             self._backend_name = backend_name
             self._be = select_backend(backend_name, slave=slave)
             mons = self._be.enum_monitors()
             if not mons:
                 raise RuntimeError("后端 %s 没枚举到显示器" % backend_name)
-            self._dev = nw.NanweiMonitor(self._be, mon_id)
+            self._dev = nw.make_monitor(self._model, self._be, mon_id)
             versions = self._dev.versions()
             desc = next((m.description for m in mons if m.id == mon_id), mons[0].description)
             return {"ok": True, "backend": backend_name, "address": "0x%02X" % self._be.address,
-                    "mon_id": mon_id, "description": desc, "versions": versions}
+                    "mon_id": mon_id, "description": desc, "versions": versions,
+                    "model": self._model, "meta": self.protocol_meta()}
         except Exception as e:
             self._be = None
             self._dev = None
@@ -177,7 +245,7 @@ class Api:
         try:
             if self._be is None:
                 raise RuntimeError("尚未建链")
-            self._dev = nw.NanweiMonitor(self._be, int(mon_id))
+            self._dev = nw.make_monitor(self._model, self._be, int(mon_id))
             return {"ok": True, "versions": self._dev.versions()}
         except Exception as e:
             self._dev = None
@@ -203,6 +271,41 @@ class Api:
         except Exception as e:
             return _err(e)
 
+    def get_choice(self, kind):
+        """读色温/gamma, 返回已换算成"选项值"的 current (各机型读回规则不同)。"""
+        try:
+            dev = self._ensure()
+            r = dev.get_choice(str(kind))
+            tx = nw.frame_hex(get_vcp_payload(nw.CHOICE_OPS[str(kind)]), dev.slave)
+            if r is None:
+                return {"ok": False, "error": "无应答", "tx": tx}
+            return {"ok": True, "current": r[0], "maximum": r[1], "tx": tx}
+        except Exception as e:
+            return _err(e)
+
+    def set_choice(self, kind, value):
+        try:
+            dev = self._ensure()
+            dev.set_choice(str(kind), int(value))
+            return {"ok": True, "tx": nw.frame_hex(dev.choice_payload(str(kind), int(value)), dev.slave)}
+        except Exception as e:
+            return _err(e)
+
+    def hold_key(self, name, seconds):
+        """216pin: 按住某键 seconds 秒再松开 (长按类 OSD 操作)。期间前端锁住按键区。"""
+        try:
+            if not nw.model_info(self._model)["hold"]:
+                return {"ok": False, "error": "当前机型不支持长按"}
+            dev = self._ensure()
+            held = dev.hold_key(str(name), float(seconds))
+            k = nw.HOLD_KEYS_216[str(name)]
+            tx = "%s  … %.1fs …  %s" % (
+                nw.frame_hex(nw.key_payload_216(k, nw.KEY_MODE_HOLD), dev.slave), held,
+                nw.frame_hex(nw.key_payload_216(nw.KEY_RELEASE_216, nw.KEY_MODE_TAP), dev.slave))
+            return {"ok": True, "seconds": held, "tx": tx}
+        except Exception as e:
+            return _err(e)
+
     def press_key(self, name):
         try:
             if name not in nw.KEYS:
@@ -215,6 +318,8 @@ class Api:
 
     def enter_factory(self):
         """按键宏进工厂菜单: Menu→OK。前端按钮期间置灰。"""
+        if not nw.model_info(self._model)["macros"]:
+            return {"ok": False, "error": "当前机型没有这个按键宏"}
         try:
             dev = self._ensure()
             sent = dev.enter_factory()
@@ -228,6 +333,8 @@ class Api:
 
         整个宏约 3 秒 (含按键间隔), 前端按钮期间置灰。
         """
+        if not nw.model_info(self._model)["macros"]:
+            return {"ok": False, "error": "当前机型没有这个按键宏"}
         try:
             dev = self._ensure()
             sent = dev.start_aging()
@@ -247,10 +354,14 @@ class Api:
             return _err(e)
 
     def protocol_meta(self):
-        """协议常量交给前端渲染 (单一数据源, 前端不重复写值表)。"""
+        """协议常量交给前端渲染 (单一数据源, 前端不重复写值表), 按当前机型给。"""
+        cls = self._model_cls()
+        info = nw.model_info(self._model)
         return {"ok": True,
-                "colortemp": nw.COLORTEMP_VALUES,
-                "gamma": nw.GAMMA_VALUES,
+                "model": self._model,
+                "features": {"macros": info["macros"], "hold": info["hold"]},
+                "colortemp": cls.COLORTEMP,
+                "gamma": cls.GAMMA,
                 "ops": {"brightness": nw.OP_BRIGHTNESS, "contrast": nw.OP_CONTRAST,
                         "colortemp": nw.OP_COLORTEMP, "gamma": nw.OP_GAMMA}}
 
@@ -352,7 +463,7 @@ def main():
         WIN_TITLE,
         os.path.join(HERE, "ui", "nanwei", "index.html"),
         js_api=api,
-        width=430, height=420, min_size=(390, 300),
+        width=690, height=420, min_size=(640, 400),
         background_color="#0a0a0b",
         frameless=True, easy_drag=False,
     )
@@ -363,7 +474,10 @@ def main():
     if gui == "qt":
         try:
             from qtpy.QtCore import Qt, QCoreApplication
-            QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+            # Win7 打包入口已按主屏 DPI 注入 QT_SCALE_FACTOR; 这时再开 Qt 自动缩放会叠成两倍
+            # (200% 屏上窗口变 4 倍大, 2026-10-12 实测)。只在没注入时才让 Qt 自己检测。
+            if not os.environ.get("QT_SCALE_FACTOR"):
+                QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
             QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
         except Exception:
             pass

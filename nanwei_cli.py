@@ -10,6 +10,7 @@
   py -3 nanwei_cli.py factory                # 按键宏: Menu→OK 进工厂菜单
   py -3 nanwei_cli.py aging                  # 按键宏: 进工厂菜单后一路进老化
   py -3 nanwei_cli.py ver
+  py -3 nanwei_cli.py hold menu 5            # 216pin: 按住某键 N 秒再松开 (长按类 OSD 操作)
 
 英伟达机排障 (不建链, 直接问 32 位 helper, 建链失败时先跑这两条):
   py -3 nanwei_cli.py nvscan                 # 列 helper 枚举到的屏 + EDID + 试读亮度
@@ -17,6 +18,7 @@
 
 后端默认 rawusb (USB 小板); 台式机切显卡通道: set DDCCI_BACKEND=gpu。
 从机地址默认 0x5E (南微); 陪练标准 DDC/CI 机型: set DDCCI_SLAVE=0x6E。
+216pin 机型: set DDCCI_MODEL=216 (地址自动用 0x6E; 协议见 docs/protocol-216pin.md)。
 每条命令都打印线上帧, 方便和逻辑分析仪对帧。
 """
 import os
@@ -38,16 +40,22 @@ PARAMS = {
 
 def _open():
     name = os.environ.get("DDCCI_BACKEND", "rawusb")
-    be = select_backend(name)
+    model = os.environ.get("DDCCI_MODEL", nw.DEFAULT_MODEL)
+    nw.model_info(model)
+    kwargs = {}
+    if not os.environ.get("DDCCI_SLAVE"):
+        kwargs["slave"] = nw.model_info(model)["slaves"][0]
+    be = select_backend(name, **kwargs)
     mons = be.enum_monitors()
-    print("后端 = %s, 从机 = 0x%02X, 设备 = %s" % (name, be.address, mons[0].description))
-    return be, nw.NanweiMonitor(be, mons[0].id)
+    print("机型 = %spin, 后端 = %s, 从机 = 0x%02X, 设备 = %s"
+          % (model, name, be.address, mons[0].description))
+    return be, nw.make_monitor(model, be, mons[0].id)
 
 
 def _get_one(dev, key):
     label, op = PARAMS[key]
     print("TX  %s" % nw.frame_hex(get_vcp_payload(op), dev.slave))
-    r = dev.get(op)
+    r = dev.get_choice(key) if key in nw.CHOICE_OPS else dev.get(op)
     if r is None:
         print("%-4s (0x%02X): 无应答" % (label, op))
         return False
@@ -144,7 +152,7 @@ def main(argv):
         return nvshort(argv[2], argv[3])
     try:
         be, dev = _open()
-    except RuntimeError as e:
+    except (RuntimeError, ValueError) as e:
         print("建链失败: %s" % e)
         return 1
     try:
@@ -174,11 +182,17 @@ def main(argv):
             return rc
 
         if cmd == "set":
-            label, op = PARAMS[argv[2].lower()]
+            key = argv[2].lower()
+            label, op = PARAMS[key]
             val = int(argv[3], 0)
-            print("TX  %s" % nw.frame_hex(set_vcp_payload(op, val), dev.slave))
-            dev.set(op, val)
-            r = dev.get(op)
+            if key in nw.CHOICE_OPS:     # 色温/gamma 按机型换算 (216pin gamma 写走 C0 91)
+                print("TX  %s" % nw.frame_hex(dev.choice_payload(key, val), dev.slave))
+                dev.set_choice(key, val)
+                r = dev.get_choice(key)
+            else:
+                print("TX  %s" % nw.frame_hex(set_vcp_payload(op, val), dev.slave))
+                dev.set(op, val)
+                r = dev.get(op)
             print("写 %s=%d, 回读 = %s" % (label, val, "%d (0x%02X)" % (r[0], r[0]) if r else "无应答"))
             return 0 if (r and r[0] == (val & 0xFF)) else 1
 
@@ -193,6 +207,22 @@ def main(argv):
             dev.press_key_value(value)
             print("按键 %s 已发 (无回读, 看屏幕 OSD)" % name)
             return 0
+
+        if cmd == "hold":
+            if not hasattr(dev, "hold_key"):
+                print("当前机型不支持长按 (set DDCCI_MODEL=216)")
+                return 2
+            name, sec = argv[2].lower(), float(argv[3]) if len(argv) > 3 else 3.0
+            k = nw.HOLD_KEYS_216[name]
+            print("TX  %s   (按住 %s)" % (nw.frame_hex(nw.key_payload_216(k, nw.KEY_MODE_HOLD), dev.slave), name))
+            held = dev.hold_key(name, sec)
+            print("TX  %s   (%.1fs 后松开)" % (nw.frame_hex(
+                nw.key_payload_216(nw.KEY_RELEASE_216, nw.KEY_MODE_TAP), dev.slave), held))
+            return 0
+
+        if cmd in ("factory", "aging") and dev.model == "216":
+            print("216pin 的工厂菜单/老化按键序列未知, 先用 key / hold 手动试")
+            return 2
 
         if cmd in ("factory", "aging"):
             keys = nw.FACTORY_KEYS if cmd == "factory" else nw.AGING_KEYS

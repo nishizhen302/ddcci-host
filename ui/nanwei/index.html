@@ -1,167 +1,205 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DDCCI控制台</title>
-  <link rel="stylesheet" href="style.css?v=20260730a">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDC 控制台</title>
+<script>
+  // 外观: 用户选过就用用户的, 否则跟随系统。先定再出第一帧, 免得闪。
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("ddc-appearance"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<link rel="stylesheet" href="style.css">
 </head>
-<body data-theme="light">
-  <div class="resz t"  data-ht="12"></div>
-  <div class="resz b"  data-ht="15"></div>
-  <div class="resz l"  data-ht="10"></div>
-  <div class="resz r"  data-ht="11"></div>
-  <div class="resz tl" data-ht="13"></div>
-  <div class="resz tr" data-ht="14"></div>
-  <div class="resz bl" data-ht="16"></div>
-  <div class="resz br" data-ht="17"></div>
+<body>
+<div class="resz t"  data-ht="12"></div><div class="resz b"  data-ht="15"></div>
+<div class="resz l"  data-ht="10"></div><div class="resz r"  data-ht="11"></div>
+<div class="resz tl" data-ht="13"></div><div class="resz tr" data-ht="14"></div>
+<div class="resz bl" data-ht="16"></div><div class="resz br" data-ht="17"></div>
 
-  <main class="shell" aria-label="南微 DDCCI 控制台">
-    <header class="titlebar pywebview-drag-region">
-      <div class="brand">
-        <span id="pulse" class="status-dot" data-state="idle"></span>
-        <strong>DDC控制台</strong>
-        <span id="ver-label" class="ver pywebview-no-drag" title="检查更新">v…</span>
-        <span id="conn">连接中…</span>
-      </div>
-      <div class="title-actions">
-        <button id="win-refresh" class="icon-btn pywebview-no-drag" type="button" aria-label="重新扫描" title="重新扫描">↻</button>
-        <button id="skin" class="icon-btn theme-toggle pywebview-no-drag" type="button" aria-label="切换皮肤" title="切换深色 / 浅色">
-          <span class="moon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
-          <span class="sun"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.66 1.41"/></svg></span>
+<div class="app" id="app" data-phase="boot" data-link="scan">
+
+  <!-- 氛围背景: 屏幕画面的大面积模糊, 随色温/亮度变 -->
+  <div class="ambient" aria-hidden="true">
+    <img src="wall.svg" alt="" id="amb">
+    <div class="veil" id="veil"></div>
+  </div>
+
+  <!-- 标题栏: 中间是灵动岛, 右边是窗口按钮 -->
+  <header class="titlebar pywebview-drag-region">
+    <button class="island pywebview-no-drag" id="island" type="button" title="通信记录">
+      <span class="is-in" id="is-in"></span>
+    </button>
+    <div class="caps">
+      <button id="skin" class="cap pywebview-no-drag" type="button" title="外观">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><path class="fill" d="M12 4.5a7.5 7.5 0 0 1 0 15z"/></svg>
+      </button>
+      <button id="win-min" class="cap pywebview-no-drag" type="button" title="最小化">
+        <svg viewBox="0 0 24 24"><path d="M6.5 12h11"/></svg>
+      </button>
+      <button id="win-close" class="cap close pywebview-no-drag" type="button" title="关闭">
+        <svg viewBox="0 0 24 24"><path d="M7.5 7.5l9 9M16.5 7.5l-9 9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- ========== 左: 设备 + 遥控 ========== -->
+    <section class="col left">
+      <div class="hero">
+        <div class="device" id="device">
+          <div class="d-body">
+            <div class="d-screen" id="screen">
+              <img class="pic" id="pic" src="wall.svg" alt="">
+              <div class="tint" id="tint"></div>
+              <div class="sheen"></div>
+            </div>
+          </div>
+          <div class="d-arm"></div>
+          <div class="d-base"></div>
+        </div>
+        <button class="dev-pick" id="dev-pick" type="button" title="选择显示器">
+          <h1 id="dev-name">正在查找…</h1>
+          <svg viewBox="0 0 24 24"><path d="M7.5 10l4.5 4.5 4.5-4.5"/></svg>
         </button>
-        <button id="win-min" class="icon-btn ghost pywebview-no-drag" type="button" aria-label="最小化" title="最小化">−</button>
-        <button id="win-close" class="icon-btn close pywebview-no-drag" type="button" aria-label="关闭" title="关闭">×</button>
+        <p class="dev-sub" id="dev-sub"><i class="st-dot"></i><span id="dev-path">正在查找显示器…</span></p>
+        <p class="dev-fw" id="dev-fw">&nbsp;</p>
+        <div class="menu" id="dev-menu" role="menu"></div>
       </div>
-    </header>
 
-    <div class="scroll">
-    <div class="scroll-inner">
-    <section class="connect-strip" aria-label="连接信息">
-      <details class="target-picker" id="target-picker">
-        <summary>
-          <strong id="target-name">扫描中...</strong>
-        </summary>
-        <div id="target-menu" class="target-menu" role="listbox" aria-label="选择控制路径"></div>
-      </details>
-      <div class="chip-row">
-        <span class="chip" id="backend-chip">backend</span>
-        <span class="chip soft" id="addr-chip">addr --</span>
-        <span class="chip soft" id="version-chip">HW v-- · SW v--</span>
+      <div class="util">
+        <button class="ut" id="act-raw" type="button" title="向显示器发送任意按键码">
+          <svg viewBox="0 0 24 24"><rect x="3.5" y="6.5" width="17" height="11" rx="2"/><path d="M7 10h.01M10 10h.01M13 10h.01M16.5 10h.01M8 14h8"/></svg>发送键值</button>
+        <button class="ut" id="act-log" type="button" title="查看收发的原始帧">
+          <svg viewBox="0 0 24 24"><path d="M9 7h10M9 12h10M9 17h10M5 7h.01M5 12h.01M5 17h.01"/></svg>通信记录<span id="log-n">0</span></button>
+        <button class="ut ver pywebview-no-drag" id="ver-label" type="button" title="检查更新">v…</button>
       </div>
     </section>
 
-    <section class="panel remote" aria-label="模拟按键">
-      <div class="section-head">
-        <span>模拟按键</span>
-        <b>OSD Keys</b>
+    <!-- ========== 右: 控制 ========== -->
+    <section class="col right" id="right">
+      <div class="module remote">
+        <div class="rm-head"><span>OSD 按键</span><span class="rm-hint">M · ← · → · Esc</span></div>
+        <div class="keys">
+          <button class="key" data-key="menu" type="button" title="MENU (M)">
+            <span class="kc"><svg viewBox="0 0 24 24"><path d="M6 7.5h12M6 12h12M6 16.5h12"/></svg></span><span class="kl">MENU</span></button>
+          <button class="key" data-key="left" type="button" title="LEFT (←)">
+            <span class="kc"><svg viewBox="0 0 24 24"><path d="M14.5 6.5L9 12l5.5 5.5"/></svg></span><span class="kl">LEFT</span></button>
+          <button class="key" data-key="right" type="button" title="RIGHT (→)">
+            <span class="kc"><svg viewBox="0 0 24 24"><path d="M9.5 6.5L15 12l-5.5 5.5"/></svg></span><span class="kl">RIGHT</span></button>
+          <button class="key" data-key="exit" type="button" title="EXIT (Esc)">
+            <span class="kc"><svg viewBox="0 0 24 24"><path d="M9.5 7.5L5.5 11.5l4 4"/><path d="M5.5 11.5h9a4 4 0 0 1 0 8H13"/></svg></span><span class="kl">EXIT</span></button>
+        </div>
       </div>
-      <div class="key-grid">
-        <button type="button" data-key="menu">MENU</button>
-        <button type="button" data-key="left">LEFT</button>
-        <button type="button" data-key="right">RIGHT</button>
-        <button type="button" data-key="exit">EXIT</button>
-      </div>
-      <div class="macro-row">
-        <button id="factory-btn" class="macro-btn" type="button">
-          <span>进入工厂菜单</span>
-          <b>MENU→OK</b>
+      <div class="tiles macro-row" data-model="156">
+        <button class="module tile act" id="act-factory" type="button">
+          <span class="t-ico orange"><svg viewBox="0 0 24 24"><path d="M14.6 6.4a3.8 3.8 0 0 0-5 5L5 16l3 3 4.6-4.6a3.8 3.8 0 0 0 5-5l-2.4 2.4-2.2-.6-.6-2.2z"/></svg></span>
+          <span class="t-txt"><span class="t-ttl">MENU → OK</span><span class="t-val">进入工厂菜单</span></span>
+          <i class="t-prog"></i>
         </button>
-        <button id="aging-btn" class="macro-btn" type="button">
-          <span>开启老化</span>
-          <b>工厂菜单→老化</b>
+        <button class="module tile act" id="act-aging" type="button">
+          <span class="t-ico red"><svg viewBox="0 0 24 24"><path d="M7.5 4h9M7.5 20h9M8.5 4c0 4.2 7 4.6 7 8s-7 3.8-7 8M15.5 4c0 4.2-7 4.6-7 8"/></svg></span>
+          <span class="t-txt"><span class="t-ttl">需确认</span><span class="t-val">开始老化</span></span>
+          <i class="t-prog"></i>
         </button>
       </div>
-      <div class="raw-key-row">
-        <label for="raw-key">自定义键值</label>
-        <input id="raw-key" type="text" value="0x04" inputmode="text"
-               spellcheck="false" aria-label="自定义键值 (十六进制)">
-        <button id="raw-key-send" type="button">发送</button>
+      <div class="tiles hold-row" data-model="216" hidden>
+        <div class="module tile wide" id="hold-tile">
+          <span class="t-ico blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><path d="M12 9.5V13l2.2 1.6M9.5 3.5h5"/></svg></span>
+          <span class="h-lbl">长按</span>
+          <span class="flex"></span>
+          <label class="popup" title="按住哪个键">
+            <select id="hold-key" aria-label="长按哪个键">
+              <option value="menu">MENU</option><option value="left">LEFT</option><option value="right">RIGHT</option>
+              <option value="exit">EXIT</option><option value="ok">OK</option>
+            </select>
+            <svg viewBox="0 0 24 24"><path d="M8.5 9.5L12 6l3.5 3.5M8.5 14.5L12 18l3.5-3.5"/></svg>
+          </label>
+          <span class="stepper" title="按住秒数 (0.2–30)">
+            <button type="button" data-d="-0.5" aria-label="少 0.5 秒">−</button><input id="hold-sec" value="3" inputmode="decimal" spellcheck="false" aria-label="按住秒数"><em>s</em><button type="button" data-d="0.5" aria-label="多 0.5 秒">+</button>
+          </span>
+          <button class="pill" id="hold-send" type="button">按住</button>
+          <i class="t-prog"></i>
+        </div>
       </div>
+      <div class="tiles">
+        <button class="module tile" id="t-colortemp" data-kind="colortemp" type="button">
+          <span class="t-ico"><svg viewBox="0 0 24 24"><path d="M10 13.6V5.5a2 2 0 1 1 4 0v8.1a3.8 3.8 0 1 1-4 0z"/><circle class="fill" cx="12" cy="16.6" r="1.6"/></svg></span>
+          <i class="t-dot" id="ct-dot"></i>
+          <span class="t-txt"><span class="t-ttl">色温</span><span class="t-val" id="ct-val">--</span></span>
+        </button>
+        <button class="module tile" id="t-gamma" data-kind="gamma" type="button">
+          <span class="t-ico"><svg viewBox="0 0 24 24"><path d="M5 19C11 19 15 15 19 5"/><path class="axis" d="M5 5v14h14"/></svg></span>
+          <svg class="t-mini" id="gm-mini" viewBox="0 0 40 26"><path/></svg>
+          <span class="t-txt"><span class="t-ttl">Gamma</span><span class="t-val" id="gm-val">--</span></span>
+        </button>
+      </div>
+
+      <div class="slider" id="s-brightness" data-id="brightness" tabindex="0" role="slider" aria-label="亮度">
+        <div class="s-track"></div>
+        <div class="s-face">
+          <svg class="s-ico sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path class="rays"/></svg>
+          <span class="s-lbl">亮度</span><span class="s-val">--</span>
+        </div>
+        <div class="s-fill">
+          <div class="s-face ink">
+            <svg class="s-ico sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path class="rays"/></svg>
+            <span class="s-lbl">亮度</span><span class="s-val">--</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="slider" id="s-contrast" data-id="contrast" tabindex="0" role="slider" aria-label="对比度">
+        <div class="s-track"></div>
+        <div class="s-face">
+          <svg class="s-ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path class="fill" d="M12 5a7 7 0 0 1 0 14z"/></svg>
+          <span class="s-lbl">对比度</span><span class="s-val">--</span>
+        </div>
+        <div class="s-fill">
+          <div class="s-face ink">
+            <svg class="s-ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path class="fill" d="M12 5a7 7 0 0 1 0 14z"/></svg>
+            <span class="s-lbl">对比度</span><span class="s-val">--</span>
+          </div>
+        </div>
+      </div>
+
     </section>
-
-    <details class="more-drawer">
-      <summary>
-        <span>更多设置</span>
-        <b>Image / Color / Logs</b>
-      </summary>
-
-      <div class="more-body">
-        <details class="panel accordion primary" aria-label="图像控制">
-          <summary class="section-head">
-            <span>图像</span>
-            <b>Image</b>
-          </summary>
-
-          <div class="accordion-body">
-            <article class="control-row" data-op="brightness">
-              <div class="control-copy">
-                <span>亮度</span>
-                <strong>Brightness</strong>
-              </div>
-              <button class="step" type="button" data-step="-1" data-target="brightness">−</button>
-              <label class="meter">
-                <input id="brightness" type="range" min="0" max="100" value="0">
-                <span style="--value:0%"></span>
-              </label>
-              <output id="brightness-out" class="value">--</output>
-              <button class="step" type="button" data-step="1" data-target="brightness">+</button>
-            </article>
-
-            <article class="control-row" data-op="contrast">
-              <div class="control-copy">
-                <span>对比度</span>
-                <strong>Contrast</strong>
-              </div>
-              <button class="step" type="button" data-step="-1" data-target="contrast">−</button>
-              <label class="meter">
-                <input id="contrast" type="range" min="0" max="100" value="0">
-                <span style="--value:0%"></span>
-              </label>
-              <output id="contrast-out" class="value">--</output>
-              <button class="step" type="button" data-step="1" data-target="contrast">+</button>
-            </article>
-          </div>
-        </details>
-
-        <details class="panel accordion settings" aria-label="色彩与 Gamma">
-          <summary class="section-head">
-            <span>色彩</span>
-            <b>Color / Gamma</b>
-          </summary>
-
-          <div class="accordion-body">
-            <div class="setting">
-              <div>
-                <span>色温</span>
-                <strong>Color Temp</strong>
-              </div>
-              <div id="colortemp-seg" class="seg"></div>
-            </div>
-
-            <div class="setting">
-              <div>
-                <span>Gamma</span>
-                <strong>Curve</strong>
-              </div>
-              <div id="gamma-seg" class="seg gamma"></div>
-            </div>
-          </div>
-        </details>
-
-        <details class="log-drawer">
-          <summary>
-            <span>命令日志</span>
-            <b>Raw Frames</b>
-          </summary>
-          <div id="log" class="log-list"></div>
-        </details>
-      </div>
-    </details>
-    </div>
-    </div>
   </main>
 
-  <script src="app.js?v=20260730a"></script>
+  <!-- 色温 / Gamma 展开卡 -->
+  <div class="scrim" id="scrim"></div>
+  <div class="module expand" id="expand" role="dialog"></div>
+
+  <!-- 通信记录 (从标题栏下滑出的面板) -->
+  <div class="sheet" id="sheet" role="dialog">
+    <div class="sh-head">
+      <b>通信记录</b><span id="sheet-n"></span><span class="flex"></span>
+      <button type="button" class="txtbtn" id="log-copy">拷贝</button>
+      <button type="button" class="txtbtn" id="log-clear">清除</button>
+      <button type="button" class="pill" id="sheet-done">完成</button>
+    </div>
+    <div class="sh-list" id="log"></div>
+  </div>
+
+  <!-- 提示框 -->
+  <div class="alert-wrap" id="alert-wrap">
+    <div class="alert" id="alert" role="alertdialog"></div>
+  </div>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="gammaF" color-interpolation-filters="sRGB">
+    <feComponentTransfer>
+      <feFuncR id="gR" type="gamma" amplitude="1" exponent="1" offset="0"/>
+      <feFuncG id="gG" type="gamma" amplitude="1" exponent="1" offset="0"/>
+      <feFuncB id="gB" type="gamma" amplitude="1" exponent="1" offset="0"/>
+    </feComponentTransfer>
+  </filter>
+</svg>
+<script src="app.js"></script>
 </body>
 </html>

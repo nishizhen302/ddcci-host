@@ -156,3 +156,119 @@ def test_versions_none_when_silent():
     dev = nw.NanweiMonitor(be, 0)
     v = dev.versions()
     assert v == {"hw": None, "sw": None}
+
+
+# ---- 216pin 机型 (协议从固件逆向, 见 docs/protocol-216pin.md) ----
+
+def test_make_monitor_picks_class_by_model():
+    be = FakeBackend()
+    assert type(nw.make_monitor("156", be)) is nw.NanweiMonitor
+    assert isinstance(nw.make_monitor("216", be), nw.Monitor216)
+    with pytest.raises(ValueError):
+        nw.make_monitor("999", be)
+
+
+def test_model_table_addresses():
+    assert nw.model_info("156")["slaves"] == [0x5E, 0x6E]
+    assert nw.model_info("216")["slaves"] == [0x6E]      # 固件 FF23 只写 0x6E (0x6A 是调试模式)
+
+
+def test_216_colortemp_uses_mccs_values():
+    assert {o["label"]: o["value"] for o in nw.COLORTEMP_VALUES_216} == {
+        "6500K": 0x05, "9300K": 0x08, "7500K": 0x06, "5000K": 0x04, "sRGB": 0x01, "User": 0x0B}
+
+
+def test_216_gamma_written_by_c0_91_and_read_back_minus_one():
+    be = FakeBackend()
+    dev = nw.Monitor216(be, 0)
+    dev.set_choice("gamma", 3)
+    assert be.raw == [[0xC0, 0x91, 0x02, 0x00]]          # gamma3 = 子命令参数 2
+    assert dev.choice_payload("gamma", 1) == [0xC0, 0x91, 0x00, 0x00]
+    be.vcp[nw.OP_GAMMA] = [0x04, 0x08]                    # GET 0x72 读回 = 档位+1
+    assert dev.get_choice("gamma") == (3, 7)
+
+
+def test_216_colortemp_goes_through_standard_vcp():
+    be = FakeBackend()
+    dev = nw.Monitor216(be, 0)
+    dev.set_choice("colortemp", 0x08)
+    assert be.vcp[nw.OP_COLORTEMP][0] == 0x08 and be.raw == []
+    assert dev.get_choice("colortemp")[0] == 0x08
+
+
+def test_216_tap_key_same_frame_as_156():
+    be = FakeBackend()
+    nw.Monitor216(be, 0).press_key("right")
+    assert be.raw == [[0xC0, 0x96, 0x01, 0x00]]
+
+
+def test_216_hold_key_then_release():
+    be = FakeBackend()
+    waited = []
+    dev = nw.Monitor216(be, 0)
+    assert dev.hold_key("right", 3, sleep=waited.append) == 3
+    # 按住用 mode 01; RIGHT 在 mode 00 下发 1 会被固件换成消息 2, 所以按住发 2 保持同一个键
+    assert be.raw == [[0xC0, 0x96, 0x02, 0x01], [0xC0, 0x96, 0xFF, 0x00]]
+    assert waited == [3]
+
+
+def test_216_hold_releases_even_if_wait_fails():
+    be = FakeBackend()
+    dev = nw.Monitor216(be, 0)
+
+    def boom(_):
+        raise KeyboardInterrupt
+    with pytest.raises(KeyboardInterrupt):
+        dev.hold_key("menu", 1, sleep=boom)
+    assert be.raw[-1] == [0xC0, 0x96, 0xFF, 0x00]         # 松开帧一定补发, 不留卡住的键
+
+
+def test_216_hold_seconds_clamped():
+    be = FakeBackend()
+    assert nw.Monitor216(be, 0).hold_key("ok", 999, sleep=lambda s: None) == nw.HOLD_MAX_SEC
+
+
+def test_216_versions_skip_unsupported_hw_opcode():
+    be = FakeBackend()
+    be.vcp[nw.OP_SW_VERSION] = [0x01, 0xFF]
+    asked = []
+    orig = be.get_vcp
+    be.get_vcp = lambda mon, code: (asked.append(code), orig(mon, code))[1]
+    assert nw.Monitor216(be, 0).versions() == {"hw": None, "sw": 1}
+    assert nw.OP_HW_VERSION not in asked
+
+
+def test_216_has_no_156_macros():
+    dev = nw.Monitor216(FakeBackend(), 0)
+    with pytest.raises(NotImplementedError):
+        dev.start_aging(key_gap=0)
+
+
+# ---- 机型自动识别 ----
+
+class _AddrBe(FakeBackend):
+    def __init__(self, address, vcp):
+        super().__init__()
+        self.address = address
+        self.vcp.update(vcp)
+
+
+def test_detect_0x5e_is_156_without_asking():
+    be = _AddrBe(0x5E, {})
+    be.get_vcp = lambda *a: pytest.fail("0x5E 不用读就知道是 156")
+    assert nw.detect_model(be, 0) == "156"
+
+
+def test_detect_216_by_gamma_max():
+    assert nw.detect_model(_AddrBe(0x6E, {nw.OP_GAMMA: [0x04, 0x08]}), 0) == "216"
+
+
+def test_detect_156_sample_on_0x6e():
+    # 156pin 样机在 0x6E 应答南微命令集: 色温/gamma max 都是 0x0D
+    be = _AddrBe(0x6E, {nw.OP_GAMMA: [0x08, 0x0D], nw.OP_COLORTEMP: [0x05, 0x0D]})
+    assert nw.detect_model(be, 0) == "156"
+
+
+def test_detect_falls_back_to_colortemp_then_216():
+    assert nw.detect_model(_AddrBe(0x6E, {nw.OP_COLORTEMP: [0x05, 0x0B]}), 0) == "216"
+    assert nw.detect_model(_AddrBe(0x6E, {}), 0) == "216"

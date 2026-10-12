@@ -22,6 +22,26 @@
   - 进工厂菜单 = `Menu → OK`
   - 开启老化 = 进工厂菜单后再 `Menu → Menu → Right → Menu → Exit → Exit`
 
+## 机型（156pin / 216pin）
+
+机型不用手选：扫描时 0x5E / 0x6E 都探，每台应答的显示器自动识别机型（`nanwei_core.detect_model`：
+0x5E = 156pin；0x6E 上看 GET 0x72 / 0x14 的 max —— 216pin 回 0x08 / 0x0B，156pin 样机回 0x0D），
+目标下拉框每项标出机型，选中哪台就按它的机型建链并切界面，连接栏 `216pin` 标签显示识别结果。
+上次连接的机型记在 `%APPDATA%\DDCCI-Nanwei\settings.json`（页面 origin 是 pywebview 随机端口，
+localStorage 跨启动存不住），只用于扫描结果出来前先摆对界面。
+
+| | 156pin（南微） | 216pin |
+|---|---|---|
+| 地址 | 0x5E（兼探 0x6E）| 0x6E |
+| 色温 | VCP 0x14：08/06/05 = 6500K/9300K/User | VCP 0x14 MCCS 值：05/08/06/04/01/0B = 6500K/9300K/7500K/5000K/sRGB/User |
+| Gamma | VCP 0x72 写 06~0C | 写 `C0 91 n-1 00`，读 GET 0x72（读回 = 档位+1）|
+| 版本 | 0xE0 + 0xC9 | 只有 0xC9 |
+| 按键 | `C0 96 key 00` + 工厂/老化宏 | `C0 96 key 00` + **长按**（`C0 96 key 01` 按住 → `C0 96 FF 00` 松开）|
+
+216pin 协议是从固件逆向的，**尚未实机验证**，细节与待验证清单见 `docs/protocol-216pin.md`。
+机型差异全部收在 `nanwei_core.py`（`Monitor216` / `make_monitor` / `MODELS`），前端只认"选项值"。
+CLI：`set DDCCI_MODEL=216` 后 `check/get/set/key` 自动按 216pin 走，另有 `hold <键> <秒>`。
+
 ## 用法
 
 ```
