@@ -181,3 +181,8 @@ def test_216_keypad_rendered_from_meta():
     assert 'data-model="156"' in four[:60]
     js = _js()
     assert "meta.keypad" in js and "#hold-key" in js
+    # 每个键都有说明书同款图标 (KEY_ICONS 里缺了就会退回显示键号)
+    icons = js[js.index("const KEY_ICONS"):js.index("function renderKeypad")]
+    import nanwei_core as nw
+    for k in nw.KEYPAD_216:
+        assert "\n  %s:" % k["icon"] in icons, k

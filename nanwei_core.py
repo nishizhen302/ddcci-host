@@ -178,19 +178,22 @@ KEY_RELEASE_216 = 0xFF
 # (docs/protocol-216pin.md 第 5 节)。只有 MENU/EXIT 能确定, 其余功能没在实机试过:
 # 界面先按 1~7 编号、小字写推测, 用户实机试完再改 label/hint (2026-10-12)。
 # alias = 键盘快捷键 / 156pin 叫法对应到哪个键 (必须和下面 HOLD_KEYS_216 的同名项是同一个消息号)。
+# 2026-10-15 用户实机定义了功能和面板排列 (表的先后 = 界面从左到右的顺序, 照实物面板):
+# 1 MENU · 5 信号源 · 7 下 · 6 上 · 3 左 · 2 右 · 4 EXIT。注意 2=右/3=左, 和逆向时的猜测相反。
+# icon = 按钮上画的图标 (照说明书按键表, 见 ui/nanwei/app.js KEY_ICONS); label 键号只留在悬停提示/日志里。
 KEYPAD_216 = [
-    {"id": "k1", "msg": 0, "label": "1", "hint": "MENU", "alias": "menu"},
-    {"id": "k2", "msg": 1, "label": "2", "hint": "左?", "alias": "left"},
-    {"id": "k3", "msg": 2, "label": "3", "hint": "右?", "alias": "right"},
-    {"id": "k4", "msg": 3, "label": "4", "hint": "EXIT", "alias": "exit"},
-    {"id": "k5", "msg": 6, "label": "5", "hint": "?", "alias": None},
-    {"id": "k6", "msg": 8, "label": "6", "hint": "?", "alias": None},
-    {"id": "k7", "msg": 9, "label": "7", "hint": "?", "alias": None},
+    {"id": "k1", "msg": 0, "label": "1", "hint": "MENU", "alias": "menu", "icon": "menu"},
+    {"id": "k5", "msg": 6, "label": "5", "hint": "信号源", "alias": None, "icon": "source"},
+    {"id": "k7", "msg": 9, "label": "7", "hint": "下", "alias": None, "icon": "down"},
+    {"id": "k6", "msg": 8, "label": "6", "hint": "上", "alias": None, "icon": "up"},
+    {"id": "k3", "msg": 2, "label": "3", "hint": "左", "alias": "left", "icon": "left"},
+    {"id": "k2", "msg": 1, "label": "2", "hint": "右", "alias": "right", "icon": "right"},
+    {"id": "k4", "msg": 3, "label": "4", "hint": "EXIT", "alias": "exit", "icon": "exit"},
 ]
 # 键名 -> 按键消息号。mode 01 (按住) 直接发消息号; mode 00 (点按) 固件会把 1/2 互换, 发之前先换回来,
 # 保证"点一下"和"按住"是同一个键。menu/left/right/exit/ok 沿用 156pin 的叫法 (键盘快捷键/CLI):
-# 156 点按 right 发 1 -> 216 固件得到消息 2, 所以 right = 消息 2。ok (消息 4) 不对应任何物理键。
-HOLD_KEYS_216 = {"menu": 0x00, "left": 0x01, "right": 0x02, "exit": 0x03, "ok": 0x04}
+# 实机: 消息 1 = 右, 消息 2 = 左 (2026-10-15 用户确认)。ok (消息 4) 不对应任何物理键。
+HOLD_KEYS_216 = {"menu": 0x00, "left": 0x02, "right": 0x01, "exit": 0x03, "ok": 0x04}
 HOLD_KEYS_216.update({k["id"]: k["msg"] for k in KEYPAD_216})
 
 

@@ -196,10 +196,12 @@ def test_216_colortemp_goes_through_standard_vcp():
     assert dev.get_choice("colortemp")[0] == 0x08
 
 
-def test_216_tap_key_same_frame_as_156():
+def test_216_right_is_panel_key_2():
+    """实机: 右 = 面板键 2 = 消息 1 (2026-10-15 用户确认); 点按 mode 00 要发互换后的 2。"""
     be = FakeBackend()
     nw.Monitor216(be, 0).press_key("right")
-    assert be.raw == [[0xC0, 0x96, 0x01, 0x00]]
+    nw.Monitor216(be, 0).press_key("k2")
+    assert be.raw == [[0xC0, 0x96, 0x02, 0x00]] * 2
 
 
 def test_216_hold_key_then_release():
@@ -207,8 +209,8 @@ def test_216_hold_key_then_release():
     waited = []
     dev = nw.Monitor216(be, 0)
     assert dev.hold_key("right", 3, sleep=waited.append) == 3
-    # 按住用 mode 01; RIGHT 在 mode 00 下发 1 会被固件换成消息 2, 所以按住发 2 保持同一个键
-    assert be.raw == [[0xC0, 0x96, 0x02, 0x01], [0xC0, 0x96, 0xFF, 0x00]]
+    # 按住用 mode 01 直接发消息号: 右 = 消息 1
+    assert be.raw == [[0xC0, 0x96, 0x01, 0x01], [0xC0, 0x96, 0xFF, 0x00]]
     assert waited == [3]
 
 
@@ -276,8 +278,11 @@ def test_detect_falls_back_to_colortemp_then_216():
 
 def test_216_keypad_has_the_seven_panel_keys():
     """216pin 面板 7 键 = ADC 表里的消息号 0/1/2/3/6/8/9 (docs/protocol-216pin.md 第 5 节)。"""
-    assert [k["msg"] for k in nw.KEYPAD_216] == [0, 1, 2, 3, 6, 8, 9]
-    assert [k["label"] for k in nw.KEYPAD_216] == [str(i) for i in range(1, 8)]
+    assert sorted(k["msg"] for k in nw.KEYPAD_216) == [0, 1, 2, 3, 6, 8, 9]
+    # 界面从左到右 = 实物面板排列 (2026-10-15 用户定义)
+    assert [k["label"] for k in nw.KEYPAD_216] == ["1", "5", "7", "6", "3", "2", "4"]
+    assert [k["hint"] for k in nw.KEYPAD_216] == ["MENU", "信号源", "下", "上", "左", "右", "EXIT"]
+    assert all(k["id"] == "k" + k["label"] for k in nw.KEYPAD_216)   # id 跟编号走, CLI 的 k1~k7 不变
     for k in nw.KEYPAD_216:                      # 别名和旧键名必须指向同一个消息号
         if k["alias"]:
             assert nw.HOLD_KEYS_216[k["alias"]] == k["msg"]

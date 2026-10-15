@@ -29,8 +29,9 @@ const DEMO_META_216 = {
     { label: "5000K", value: 0x04 }, { label: "sRGB", value: 0x01 }, { label: "User", value: 0x0b },
   ],
   gamma: Array.from({ length: 7 }, (_, i) => ({ label: `γ${i + 1}`, value: i + 1 })),
-  keypad: [["MENU", "menu"], ["左?", "left"], ["右?", "right"], ["EXIT", "exit"], ["?"], ["?"], ["?"]]
-    .map(([hint, alias], i) => ({ id: `k${i + 1}`, label: String(i + 1), hint, alias: alias || null })),
+  keypad: [[1, "MENU", "menu", "menu"], [5, "信号源", null, "source"], [7, "下", null, "down"], [6, "上", null, "up"],
+    [3, "左", "left", "left"], [2, "右", "right", "right"], [4, "EXIT", "exit", "exit"]]
+    .map(([n, hint, alias, icon]) => ({ id: `k${n}`, label: String(n), hint, alias: alias || null, icon })),
   ops: { brightness: 0x10, contrast: 0x12, colortemp: 0x14, gamma: 0x72 },
 };
 const DEMO_META_STD = {
@@ -472,16 +473,69 @@ const KEY_LBL = { menu: "MENU", left: "LEFT", right: "RIGHT", exit: "EXIT", ok: 
 const padKey = (name) => (META && META.keypad || []).find((k) => k.id === name || k.alias === name);
 const keyId = (name) => { const k = padKey(name); return k ? k.id : name; };
 const keyName = (name) => { const k = padKey(name); return k ? "键 " + k.label : KEY_LBL[name] || name; };
+// 216pin 按键图标, 照显示器说明书的按键表画 (八角星/双插头/空心三角/门+箭头); 没有图标的键退回显示键号。
+// 统一在 24 格里占 ~15~18 格、三角带 1 格圆角并按视觉重心居中, 小尺寸下不糊 (2026-10-15 精修)
+const KEY_ICONS = {
+  menu: '<path d="M12 3l2.64 2.64h3.72v3.72L21 12l-2.64 2.64v3.72h-3.72L12 21l-2.64-2.64H5.64v-3.72L3 12l2.64-2.64V5.64h3.72z"/>' +
+        '<circle cx="12" cy="12" r="2.6"/>',
+  source: '<circle cx="8" cy="5" r="1.6"/><rect x="5" y="8" width="6" height="7.5" rx="2"/><path d="M8 15.5v4"/>' +
+          '<path d="M14.5 4.5v3.5M17.5 4.5v3.5"/><rect x="13" y="8" width="6" height="7.5" rx="2"/><path d="M16 15.5v4"/>',
+  down: '<path d="M5.2 7.2a1 1 0 0 1 .87-1.5h11.86a1 1 0 0 1 .87 1.5l-5.93 10.3a1 1 0 0 1-1.74 0z"/>',
+  up: '<path d="M5.2 16.8a1 1 0 0 0 .87 1.5h11.86a1 1 0 0 0 .87-1.5L12.87 6.5a1 1 0 0 0-1.74 0z"/>',
+  left: '<path d="M16.8 5.2a1 1 0 0 1 1.5.87v11.86a1 1 0 0 1-1.5.87L6.5 12.87a1 1 0 0 1 0-1.74z"/>',
+  right: '<path d="M7.2 5.2a1 1 0 0 0-1.5.87v11.86a1 1 0 0 0 1.5.87l10.3-5.93a1 1 0 0 0 0-1.74z"/>',
+  exit: '<path d="M11 4.5H7.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H11"/><path d="M10 10h4.5V7l5.5 5-5.5 5v-3H10z"/>',
+};
 function renderKeypad(meta) {
   const pad = meta.keypad;
   if (!pad) return;
   const tip = (k) => k.hint && k.hint !== "?" ? " · " + k.hint : "";
+  const face = (k) => KEY_ICONS[k.icon] ? `<svg viewBox="0 0 24 24">${KEY_ICONS[k.icon]}</svg>` : `<b class="kn">${esc(k.label)}</b>`;
   $("#keys-216").innerHTML = pad.map((k) =>
     `<button class="key" data-key="${esc(k.id)}" type="button" title="键 ${esc(k.label)}${esc(tip(k))}">` +
-    `<span class="kc"><b class="kn">${esc(k.label)}</b></span><span class="kl">${esc(k.hint)}</span></button>`).join("");
+    `<span class="kc">${face(k)}</span><span class="kl">${esc(k.hint)}</span></button>`).join("");
   $$("#keys-216 .key").forEach((b) => b.addEventListener("click", () => pressKey(b.dataset.key)));
-  $("#hold-key").innerHTML = pad.map((k) => `<option value="${esc(k.id)}">键 ${esc(k.label)}${esc(tip(k))}</option>`).join("");
+  setHoldKey(pad.find((k) => k.id === holdBtn.value) || pad[0]);
 }
+
+// ---- 长按选键: 自绘弹出菜单 (同 #dev-menu 外观), 每项 = 图标 + 功能名 + 键号 ----
+const holdBtn = $("#hold-key"), holdMenu = $("#hold-menu");
+const keySvg = (k, cls) => KEY_ICONS[k.icon] ? `<svg class="${cls}" viewBox="0 0 24 24">${KEY_ICONS[k.icon]}</svg>` : "";
+function setHoldKey(k) {
+  if (!k) return;
+  holdBtn.value = k.id;                                       // 按住时读 #hold-key.value
+  holdBtn.title = `按住哪个键 · 键 ${k.label}`;
+  $("#hold-key-ico").innerHTML = keySvg(k, "");
+  $("#hold-key-txt").textContent = k.hint && k.hint !== "?" ? k.hint : "键 " + k.label;
+}
+function closeHoldMenu() { holdMenu.classList.remove("open"); holdBtn.classList.remove("open"); }
+holdBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (holdMenu.classList.contains("open")) { closeHoldMenu(); return; }
+  const pad = (META && META.keypad) || [];
+  if (!pad.length) return;
+  closeMenu();
+  holdMenu.innerHTML = pad.map((k) =>
+    `<button class="m-it plain" type="button" role="menuitemradio" data-id="${esc(k.id)}">` +
+    (k.id === holdBtn.value ? '<svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : "") +
+    `${keySvg(k, "ki")}<b>${esc(k.hint)}</b><em>键 ${esc(k.label)}</em></button>`).join("");
+  $$(".m-it", holdMenu).forEach((b) => b.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    setHoldKey(pad.find((k) => k.id === b.dataset.id));
+    closeHoldMenu();
+  }));
+  // 默认挂在按钮下方; 窗口矮放不下就翻到上方, 两头都不够就贴窗口底边, 菜单始终完整可见
+  const r = holdBtn.getBoundingClientRect(), h = holdMenu.offsetHeight, w = holdMenu.offsetWidth;
+  const room = window.innerHeight - 10, below = r.bottom + 6;
+  const top = below + h <= room ? below : Math.max(10, Math.min(r.top - 6 - h, room - h));
+  holdMenu.style.left = Math.max(10, Math.min(r.left, window.innerWidth - 10 - w)) + "px";
+  holdMenu.style.top = top + "px";
+  holdMenu.style.transformOrigin = top < r.top ? "0 100%" : "0 0";
+  holdMenu.classList.add("open");
+  holdBtn.classList.add("open");
+});
+document.addEventListener("click", (e) => { if (!e.target.closest("#hold-menu")) closeHoldMenu(); });
+window.addEventListener("resize", closeHoldMenu);
 function keyVisual(name) {
   const k = $$(`.keys .key[data-key="${name}"]`).find((el) => !el.closest("[hidden]"));
   if (!k) return;                                              // OK 键没有实体按钮, 只走灵动岛
@@ -504,12 +558,22 @@ function holdSeconds() {
   const v = Number(String(holdSec.value || "").trim());
   return Number.isFinite(v) && v >= 0.2 && v <= 30 ? v : null;
 }
+// 输入框宽度跟着内容走, "3s" / "12.5s" 整组才能在 −/+ 中间真正居中 (input 不会自己按内容缩)
+const secCtx = document.createElement("canvas").getContext("2d");
+function fitSec() {
+  // 不能用 cs.font: 有 font-variant-numeric 时这个简写取回来是空串, canvas 会按默认 10px 量, 偏窄截字
+  const cs = getComputedStyle(holdSec);
+  secCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  holdSec.style.width = Math.ceil(secCtx.measureText(holdSec.value || "0").width) + 2 + "px";
+}
+fitSec();
 $$(".stepper button").forEach((b) => b.addEventListener("click", () => {
   const v = holdSeconds() == null ? 3 : holdSeconds();
   holdSec.value = String(clamp(Math.round((v + Number(b.dataset.d)) * 10) / 10, 0.5, 30));
   $(".stepper").classList.remove("bad");
+  fitSec();
 }));
-holdSec.addEventListener("input", () => $(".stepper").classList.remove("bad"));
+holdSec.addEventListener("input", () => { $(".stepper").classList.remove("bad"); fitSec(); });
 holdSec.addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Enter") $("#hold-send").click(); });
 $("#hold-send").addEventListener("click", async () => {
   if (holding || macroBusy || app.dataset.link !== "ok") return;
@@ -763,6 +827,7 @@ document.addEventListener("keydown", (e) => {
     if (openKind) { closeExpand(); return; }
     if (sheet.classList.contains("open")) { closeSheet(); return; }
     if (menu.classList.contains("open")) { closeMenu(); return; }
+    if (holdMenu.classList.contains("open")) { closeHoldMenu(); return; }
   }
   if (alertResolve || openKind) return;
   if (e.target.closest && e.target.closest("input, .slider")) return;

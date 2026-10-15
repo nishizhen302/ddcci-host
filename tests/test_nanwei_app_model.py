@@ -167,7 +167,7 @@ def test_unsupported_error_has_no_usb_hint():
 
 def test_216_meta_carries_keypad_and_key5_sends_c0_frame(api):
     r = _connect_216(api)
-    assert [k["id"] for k in r["meta"]["keypad"]] == ["k1", "k2", "k3", "k4", "k5", "k6", "k7"]
+    assert [k["id"] for k in r["meta"]["keypad"]] == ["k1", "k5", "k7", "k6", "k3", "k2", "k4"]
     res = api.press_key("k5")
     assert res["ok"] and res["tx"].startswith("6E 51 84 C0 96 06 00")
     assert api.press_key("k9")["ok"] is False          # 不存在的键

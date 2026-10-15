@@ -114,15 +114,13 @@
           <span class="t-ico blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><path d="M12 9.5V13l2.2 1.6M9.5 3.5h5"/></svg></span>
           <span class="h-lbl">长按</span>
           <span class="flex"></span>
-          <label class="popup" title="按住哪个键">
-            <select id="hold-key" aria-label="长按哪个键">
-              <option value="menu">MENU</option><option value="left">LEFT</option><option value="right">RIGHT</option>
-              <option value="exit">EXIT</option><option value="ok">OK</option>
-            </select>
-            <svg viewBox="0 0 24 24"><path d="M8.5 9.5L12 6l3.5 3.5M8.5 14.5L12 18l3.5-3.5"/></svg>
-          </label>
+          <!-- 长按哪个键: 自绘弹出菜单 (#hold-menu), 不用原生 select —— Windows 原生下拉是等宽字+灰高亮, 和界面不搭 -->
+          <button class="popup" id="hold-key" type="button" value="k1" title="按住哪个键" aria-haspopup="menu">
+            <span class="hk-ico" id="hold-key-ico"></span><span class="hk-txt" id="hold-key-txt">MENU</span>
+            <svg class="hk-chev" viewBox="0 0 24 24"><path d="M8.5 9.5L12 6l3.5 3.5M8.5 14.5L12 18l3.5-3.5"/></svg>
+          </button>
           <span class="stepper" title="按住秒数 (0.2–30)">
-            <button type="button" data-d="-0.5" aria-label="少 0.5 秒">−</button><input id="hold-sec" value="3" inputmode="decimal" spellcheck="false" aria-label="按住秒数"><em>s</em><button type="button" data-d="0.5" aria-label="多 0.5 秒">+</button>
+            <button type="button" data-d="-0.5" aria-label="少 0.5 秒">−</button><span class="sv"><input id="hold-sec" value="3" inputmode="decimal" spellcheck="false" aria-label="按住秒数"><em>s</em></span><button type="button" data-d="0.5" aria-label="多 0.5 秒">+</button>
           </span>
           <button class="pill" id="hold-send" type="button">按住</button>
           <i class="t-prog"></i>
@@ -175,6 +173,7 @@
   <!-- 色温 / Gamma 展开卡 -->
   <div class="scrim" id="scrim"></div>
   <div class="module expand" id="expand" role="dialog"></div>
+  <div class="menu hk-menu" id="hold-menu" role="menu"></div>
 
   <!-- 通信记录 (从标题栏下滑出的面板) -->
   <div class="sheet" id="sheet" role="dialog">

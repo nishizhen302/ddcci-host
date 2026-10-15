@@ -358,14 +358,24 @@ svg { display: block; }
 .tile.wide:active { transform: none; }
 .t-ico.blue { background: linear-gradient(180deg, #409cff, #007aff); color: #fff; box-shadow: 0 3px 10px rgba(0, 122, 255, .35); }
 .h-lbl { font-size: 13.5px; font-weight: 600; }
-.popup { position: relative; display: flex; align-items: center; height: 28px; border-radius: 8px; background: var(--mod-hi); box-shadow: inset 0 0 0 .5px var(--mod-line); margin-right: 8px; }
-.popup select { -webkit-appearance: none; appearance: none; border: 0; outline: 0; background: transparent; color: var(--label); font: 600 12px/28px var(--mono); padding: 0 24px 0 10px; height: 28px; cursor: default; }
-.popup select option { color: #000; }
-.popup svg { position: absolute; right: 6px; width: 13px; height: 13px; fill: none; stroke: var(--label-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.popup { position: relative; display: flex; align-items: center; height: 28px; min-width: 104px; padding: 0 26px 0 9px; border-radius: 8px; background: var(--mod-hi); box-shadow: inset 0 0 0 .5px var(--mod-line); margin-right: 8px; color: var(--label); font: 600 12.5px/1 var(--sf); transition: background .2s, box-shadow .2s; }
+.popup:hover { filter: brightness(1.12); }
+.popup.open { box-shadow: inset 0 0 0 .5px var(--mod-line), 0 0 0 3px rgba(10, 132, 255, .35); }
+.hk-ico svg { display: block; width: 15px; height: 15px; margin-right: 7px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.hk-txt { white-space: nowrap; }
+.popup .hk-chev { position: absolute; right: 7px; top: 50%; margin-top: -6.5px; width: 13px; height: 13px; fill: none; stroke: var(--label-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+/* 长按键菜单: 复用 .menu 外观 (毛玻璃/悬停蓝底/勾), 位置由 JS 按按钮算, 窗口矮时往上翻 */
+/* z 45: 窗口矮时菜单上翻会伸进标题栏 (z 40, 拖动区), 必须压过它, 否则顶上那项点不中; 仍低于确认框 (50) */
+.hk-menu { left: 0; top: 0; width: 176px; margin-left: 0; z-index: 45; }
+.hk-menu .m-it { min-height: 30px; padding: 0 8px 0 26px; }
+.hk-menu .m-it .ki { flex: none; width: 15px; height: 15px; margin-right: 9px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.hk-menu .m-it b { font-size: 12.5px; }
 .stepper { display: flex; align-items: center; height: 28px; border-radius: 8px; background: var(--mod-hi); box-shadow: inset 0 0 0 .5px var(--mod-line); margin-right: 8px; }
 .stepper button { width: 24px; height: 28px; font-size: 15px; color: var(--label-2); text-align: center; border-radius: 8px; }
 .stepper button:hover { color: var(--label); }
-.stepper input { width: 30px; border: 0; background: transparent; text-align: right; font: 600 12.5px/1 var(--sfd); font-variant-numeric: tabular-nums; user-select: text; }
+/* 数字+单位当一组在 −/+ 中间居中; 输入框宽度由 JS 按内容量 (fitSec) */
+.stepper .sv { width: 40px; display: flex; align-items: baseline; justify-content: center; }
+.stepper input { width: 8px; padding: 0; border: 0; background: transparent; text-align: center; font: 600 12.5px/1 var(--sfd); font-variant-numeric: tabular-nums; user-select: text; }
 .stepper em { font-style: normal; font-size: 11.5px; color: var(--label-2); margin-left: 2px; }
 .stepper.bad { box-shadow: 0 0 0 2px var(--red); }
 #hold-send { min-width: 58px; font-variant-numeric: tabular-nums; }
